@@ -1,0 +1,9 @@
+#include <stdio.h>
+#include <assert.h>
+#include <math.h>
+#include <cuda.h>
+
+__global__ void calc_wgtmean (int Ncalcs, double *domain, double ratio) {
+  int idx = blockIdx.x*blockDim.x + threadIdx.x;
+  if (idx<Ncalcs) domain[idx] = domain[idx+1]
+}

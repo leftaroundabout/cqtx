@@ -1,0 +1,85 @@
+  // Copyright 2011-2012 Justus Sagemüller.
+
+  // This file is part of the Cqtx library.
+   //This library is free software: you can redistribute it and/or modify
+  // it under the terms of the GNU General Public License as published by
+ //  the Free Software Foundation, either version 3 of the License, or
+//   (at your option) any later version.
+   //This library is distributed in the hope that it will be useful,
+  // but WITHOUT ANY WARRANTY; without even the implied warranty of
+ //  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+//   GNU General Public License for more details.
+  // You should have received a copy of the GNU General Public License
+ //  along with this library.  If not, see <http://www.gnu.org/licenses/>.
+
+
+#ifndef CUDA_ACCELLERATION_FUNCTIONS_FOR_SQUAREDISTANCES_FOR_FITTINGMINIMIZER
+#define CUDA_ACCELLERATION_FUNCTIONS_FOR_SQUAREDISTANCES_FOR_FITTINGMINIMIZER
+
+
+#include "squdistaccel.hcu"
+
+
+       //Square-distance evaluator functions for fitting purposes. Work
+      // on a static set of measures; the first given sequence of values
+     //  (i.e., measurevalseqs[0]) is always what is to be compared to
+    //   desired function's return value. Then follow the actual function
+   //    arguments, and finally optional uncertainty specifications,
+  //     again leaded by the return comparison.
+       //The naming scheme is
+      //        cudaaccel_ꜰɴ_VAR_ᴠ₁_ᴠ₂_..._ᴠᵥ[_UNCRT[_RET]_ᴜ₁_..._ᴜᵤ]
+     //  where, if the mathematical function ꜰɴ takes parameters
+    //                         (ᴠ₁, ᴠ₂,..., ᴠₐ)
+   //    (with a≥v) the sqd-fn takes
+  //                  1 + (a-v) + (!!∃(UNCRT_RET)) + u
+ //      static parameter-arrays, in that order, with the not explicitly
+//       mentioned vᵥ₊₁, ..., vₐ ordered alphabetically.
+       //For example, the function
+      //        cudaaccel_gaussian_VAR_x0_sigma_A_UNCRT_RET
+     //  has three static arguments: the return comparison, the x variable,
+    //   and the return-comparison's uncertainty.
+       //For functions without uncertainty specification, sqdistfns return
+      // simply the absolute square-distance sum, i.e.
+     //                  ∑ⱼ( f(ᴠ₁ⱼ,...,ᴠᵥⱼ,ᴠᵥ₊₁,...,ᴠₐ) - ʀⱼ )²
+    //   whereas for functions with uncertainty, it is the pointwisely relative
+   //    square-distance sum
+  //                 ∑ⱼ ( f(ᴠ₁ⱼ,...,ᴠᵥⱼ,ᴠᵥ₊₁,...,ᴠₐ) - ʀⱼ )² / σ²
+ //      where σ is the combined (via gaussian uncertainty propagation)
+//       uncertainty of the function value and the return comparison.
+
+
+double cudaaccelsqd_gaussian_VAR_x0_sigma_A   // "A⋅exp(-(x-x₀)²/(2σ²))"
+  ( cudastoredMeasureseqRepHandle* fixed
+  , const double* fitparams              );
+
+double cudaaccelsqd_gaussian_VAR_x0_sigma_A_UNCRT_RET
+  ( cudastoredMeasureseqRepHandle* fixed
+  , const double* fitparams              );
+
+double cudaaccelsqd_gaussian_VAR_x0_sigma_A_UNCRT_x
+  ( cudastoredMeasureseqRepHandle* fixed
+  , const double* fitparams              );
+
+double cudaaccelsqd_gaussian_VAR_x0_sigma_A_UNCRT_RET_x
+  ( cudastoredMeasureseqRepHandle* fixed
+  , const double* fitparams              );
+
+
+cudaNonlinSqdistEvalFunction                // "∑ⱼ Aⱼ⋅exp(-(x-x₀ⱼ)²/(2σⱼ²))"
+  cudaaccelsqd_multigaussian_VARS_x0_sigma_A
+  ( unsigned npeaks );
+
+cudaNonlinSqdistEvalFunction
+  cudaaccelsqd_multigaussian_VARS_x0_sigma_A_UNCRT_RET
+  ( unsigned npeaks );
+
+cudaNonlinSqdistEvalFunction
+  cudaaccelsqd_multigaussian_VARS_x0_sigma_A_UNCRT_x
+  ( unsigned npeaks );
+
+cudaNonlinSqdistEvalFunction
+  cudaaccelsqd_multigaussian_VARS_x0_sigma_A_UNCRT_RET_x
+  ( unsigned npeaks );
+
+
+#endif

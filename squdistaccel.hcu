@@ -1,0 +1,86 @@
+  // Copyright 2011-2012 Justus Sagemüller.
+
+  // This file is part of the Cqtx library.
+   //This library is free software: you can redistribute it and/or modify
+  // it under the terms of the GNU General Public License as published by
+ //  the Free Software Foundation, either version 3 of the License, or
+//   (at your option) any later version.
+   //This library is distributed in the hope that it will be useful,
+  // but WITHOUT ANY WARRANTY; without even the implied warranty of
+ //  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+//   GNU General Public License for more details.
+  // You should have received a copy of the GNU General Public License
+ //  along with this library.  If not, see <http://www.gnu.org/licenses/>.
+
+
+#ifndef CUDA_ACCELLERATION_SQUAREDISTANCES_FOR_FITTINGMINIMIZER
+#define CUDA_ACCELLERATION_SQUAREDISTANCES_FOR_FITTINGMINIMIZER
+
+//#include <math.h>
+//#include <cuda_runtime.h>
+#include "cublas_v2.h"
+
+
+
+typedef struct {   //might better be moved into an own module
+  const cublasHandle_t* cublashandle;
+  int n_measures, n_valspermeasure;
+  const double* const* measurevalseqs;  //on host, *on device
+  cudaError_t cudastat;
+  double* fnresbuffer;   //a memory range of size n_measures, to be used as temporary for functions
+  cublasStatus_t cublasstat;
+}cudastoredMeasureseqRepHandle;
+
+
+typedef    //       ⤵         parameter layout explained in squdisaccel-fns.hcu
+double (*cudaNonlinSqdistEvalFunction)( cudastoredMeasureseqRepHandle*
+                                      , const double* fitparams        );
+
+typedef struct {
+  cudastoredMeasureseqRepHandle fixed_params;
+  int n_fitparams;
+  cudaNonlinSqdistEvalFunction sqdist_function;
+}cudaFnToMeasureseqSquaredistCalcHandle;
+
+
+int
+  cudaFnToMeasureseqSquaredistCalcHandle_bad
+  ( const cudaFnToMeasureseqSquaredistCalcHandle* handle );
+
+void
+  cudaFnToMeasureseqSquaredistCalcHandle_printerrmsg
+  ( const cudaFnToMeasureseqSquaredistCalcHandle* handle );
+
+cudaFnToMeasureseqSquaredistCalcHandle
+  new_cudaFnToMeasureseqSquaredistCalcHandle
+  ( const double** fixed_params      //on host, *on host
+  , const double** fixedparamsuncrts //on host, *on host
+  , const double* returncomps      //on host
+  , const double* returnuncrts     //on host, may be NULL when returnscomps are exact
+  , unsigned n_measures
+  , unsigned n_fixedparams
+  , unsigned n_fixedparamsunctrs
+  , unsigned n_fitparams
+  , cudaNonlinSqdistEvalFunction evalfunction
+  , const cublasHandle_t* cublashandle        );
+
+cudaFnToMeasureseqSquaredistCalcHandle
+  copy_cudaFnToMeasureseqSquaredistCalcHandle
+  ( cudaFnToMeasureseqSquaredistCalcHandle* handle );
+
+void
+  delete_cudaFnToMeasureseqSquaredistCalcHandle
+  ( cudaFnToMeasureseqSquaredistCalcHandle* handle );
+
+cudaFnToMeasureseqSquaredistCalcHandle
+  null_cudaFnToMeasureseqSquaredistCalcHandle();
+
+double
+  evaluate_cudaFnToMeasureseqSquaredistCalc
+  ( cudaFnToMeasureseqSquaredistCalcHandle* handle
+  , const double* fitparams  //on host
+  );
+
+
+
+#endif

@@ -1,0 +1,13 @@
+ --- Measure #0 --- 
+t_0: 4.4906\mathrm{s} <> (4481.64\pm9.23634)\mathrm{ms}
+\sigma: 1.36084\mathrm{s} <> (1370.52\pm10.8778)\mathrm{ms}
+\rho_0: 3.96935\mathrm{g} <> (3.98121\pm0.0351426)\mathrm{g}
+ --- Measure #1 --- 
+t_0: 4.66098\mathrm{s} <> (4669.1\pm6.16249)\mathrm{ms}
+\sigma: 0.173887\mathrm{s} <> (171.717\pm6.80065)\mathrm{ms}
+\rho_0: 2.21015\mathrm{g} <> (2.20383\pm0.0611339)\mathrm{g}
+ --- Measure #2 --- 
+t_0: -0.256282\mathrm{s} <> (-289.267\pm11.3483)\mathrm{ms}
+\sigma: 0.666195\mathrm{s} <> (672.677\pm12.32)\mathrm{ms}
+\rho_0: 2.22702\mathrm{g} <> (2.19476\pm0.0323327)\mathrm{g}
+
