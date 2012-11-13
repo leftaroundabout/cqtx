@@ -55,5 +55,5 @@ class lhsMultipliable {
 
 
 
-#include "../lambdalike/maybe.hpp"
-#include "../lambdalike/polyliteral.hpp"
+#include "lambdalike/maybe.hpp"
+#include "lambdalike/polyliteral.hpp"

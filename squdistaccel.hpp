@@ -1,7 +1,7 @@
 #ifndef ACCELERATED_SQUAREDISTANCE_EVALUATORS
 #define ACCELERATED_SQUAREDISTANCE_EVALUATORS
 
-#include "../lambdalike/maybe.hpp"
+#include "lambdalike/maybe.hpp"
 #include<vector>
 #include<cassert>
 #include<memory>
