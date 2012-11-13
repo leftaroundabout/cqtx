@@ -345,7 +345,11 @@ auto fittable_phmsqfn
                            -> squaredistAccelerator                            {
     return squaredistAccelerator(std::move(ah), vadfs, vus);                   }
 
-
+// TEMPLATIZED_COPYABLE_DERIVED_STRUCT( base_phmsqfn
+//                                    , phmsqfitfn_paramRemap
+//                                    , fittable_phmsqfn      ) {
+//   
+// }
 
    //evaluate the average square distance between some measure values and a
   // fit function trying to describe those values though some fit parameters.
@@ -1245,6 +1249,7 @@ const spectfit_linkingt link_peaks_width  = 0x1    // set this flag to have all 
 
 std::string spectrpeakwidth_name="\\sigma";          
 
+template<class MultiPeakFn = fittable_multigaussianfn>
 measure ffit_spectrum( const measureseq &fnplot  // w/noise level track please!
                      , const captfinder &xfind
                      , const captfinder &Afind
@@ -1252,7 +1257,7 @@ measure ffit_spectrum( const measureseq &fnplot  // w/noise level track please!
                      , unsigned npeaks = 1
                      , spectfit_linkingt linkings = 0x0
                      ) {
-  fittable_multigaussianfn fgfn(npeaks);
+  MultiPeakFn fgfn(npeaks);
 
   LaTeXindex_itrange indexrng = LaTeXindex("i").from(0).unto(npeaks);
 
@@ -1369,6 +1374,7 @@ bool spectrumfitoutcome_compatible( const ptlfit_outcome &l
 }
 #endif
 
+template<class MultiPeakFn = fittable_multigaussianfn>
 class spectrumfitter {
   captfinder xfind, Afind, noisefind;
   spectfit_linkingt linkings;
@@ -1648,7 +1654,9 @@ class spectrumfitter {
       cout << indent(nestdepth)<<"            "<<npeaks<<"peaks...\n";
 #endif
       if (npeaks>0)
-        *result = ffit_spectrum(fnplot,xfind,Afind,noisefind,npeaks,linkings).pack_subscripted();
+        *result = ffit_spectrum<MultiPeakFn>
+                        ( fnplot, xfind, Afind, noisefind, npeaks, linkings )
+                             .pack_subscripted();
       if(spectrumfit_is_ok(fnplot, *result)) {
 #ifdef SPECTRUMFITTER_PROCESSMESSAGES
         cout << indent(nestdepth) << "success, result is: (...)\n";// << *result;
@@ -1687,13 +1695,14 @@ class spectrumfitter {
   }
 };
 
+template<class MultiPeakFn = fittable_multigaussianfn>
 measureseq fit_spectrum( const measureseq fnplot
                        , const captfinder &xfind
                        , const captfinder &Afind
                        , spectfit_linkingt linkings = 0x0
                        ) {
-  spectrumfitter ftr(fnplot,xfind,Afind,linkings);
-  return ftr.result();
+  spectrumfitter<MultiPeakFn> fitter(fnplot,xfind,Afind,linkings);
+  return fitter.result();
 }
 
 
