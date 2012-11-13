@@ -951,13 +951,13 @@ if(0)cout << "minimum: " << acgmin
 //        && distatest < avgd - avgd.error();
   }
 
-  double multiplicity_stretching_lambda;
+  double multiplicity_stretching_factor;
   unsigned multiplicity_for(const physquantity &td) {             //Multiplicity aiming at a Boltzmann distribution
 if(0)cout<< "Calc multiplicity.\nAverage dist: " << avgd
          << "\nDist here now: " << td
-         << "\nmultiplicity_stretching_lambda: " << multiplicity_stretching_lambda
-         << "\n(td.minusexactly(avgd)/avgd.error()).dbl() * multiplicity_stretching_lambda: "
-         << (td.minusexactly(avgd)/avgd.error()).dbl() * multiplicity_stretching_lambda
+         << "\nmultiplicity_stretching_factor: " << multiplicity_stretching_factor
+         << "\n(td.minusexactly(avgd)/avgd.error()).dbl() * multiplicity_stretching_factor: "
+         << (td.minusexactly(avgd)/avgd.error()).dbl() * multiplicity_stretching_factor
          << "\nsched.size(): "
          << sched.size()
          << "\naim_schedlength: "
@@ -967,15 +967,15 @@ if(0)cout<< "Calc multiplicity.\nAverage dist: " << avgd
          << "\n(td.minusexactly(avgd)/avgd.error()).dbl() + (double(sched.size()) - aim_schedlength) / aim_schedlength: "
          << (td.minusexactly(avgd)/avgd.error()).dbl() + double(sched.size() - aim_schedlength) / aim_schedlength
          << "\nBoltzmann: "
-         << exp(- (td.minusexactly(avgd)/avgd.error()).dbl() * multiplicity_stretching_lambda
+         << exp(- (td.minusexactly(avgd)/avgd.error()).dbl() * multiplicity_stretching_factor
                                            - (double(sched.size()) - aim_schedlength) / aim_schedlength )
          << "\ndithered: ";
     unsigned result= std::min (unsigned(dither_round( exp( ( - (td.minusexactly(avgd)/avgd.error()).dbl()
                                            - (double(sched.size()) - aim_schedlength) / aim_schedlength )
-                                            * multiplicity_stretching_lambda ) ) ),
+                                            * multiplicity_stretching_factor ) ) ),
                 aim_schedlength/4)     ;
-    if (result==1) multiplicity_stretching_lambda *= 1 + 2./aim_schedlength;
-     else multiplicity_stretching_lambda *= 1 - 1./aim_schedlength;
+    if (result==1) multiplicity_stretching_factor *= 1 + 2./aim_schedlength;
+     else multiplicity_stretching_factor *= 1 - 1./aim_schedlength;
    // cout << result << "\n\n";
     return result;
   }
@@ -1165,7 +1165,7 @@ if(0)cout<< "Calc multiplicity.\nAverage dist: " << avgd
 #else
     , msgstream(nullptr)
 #endif
-    , multiplicity_stretching_lambda(1)
+    , multiplicity_stretching_factor(1)
     , solutioncertaintycriterium(solcertaintycriterium) {
     minmzstate.complete_carefully(f.example_parameterset());
     aim_schedlength = std::max(6 * minmzstate.size() * minmzstate.size(), size_t(92u));
