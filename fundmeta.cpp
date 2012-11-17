@@ -18,8 +18,11 @@
 template< class Base, class Derived >// to be copyable from only a base class pointer.
 class copyable_derived: public Base {
  public:
-  virtual Base *clone() const{
+  virtual Base *clone() const override {
     return new Derived(static_cast<const Derived&>(*this));
+  }
+  virtual Base *moved() override {
+    return new Derived(static_cast<Derived&&>(std::move(*this)));
   }
 };
 
@@ -35,6 +38,18 @@ class copyable_derived: public Base {
 #define TEMPLATIZED_COPYABLE_DERIVED_STRUCT(T, D, B) \
   template<class T>                                  \
   struct D : copyable_derived< B, D<T> >
+#define TEMPLATIZED2_COPYABLE_PDERIVED_CLASS(T, T2K, T2, D, B) \
+  template<class T, T2K T2>                                    \
+  class D : public copyable_derived< B, D<T, T2> >
+#define TEMPLATIZED2_COPYABLE_DERIVED_STRUCT(T, T2K, T2, D, B) \
+  template<class T, T2K T2>                                    \
+  struct D : copyable_derived< B, D<T, T2> >
+#define TEMPLATIZED3_COPYABLE_PDERIVED_CLASS(T, T2K, T2, T3K, T3, D, B) \
+  template<class T, T2K T2, T3K T3>                                     \
+  class D : public copyable_derived< B, D<T, T2, T3> >
+#define TEMPLATIZED3_COPYABLE_DERIVED_STRUCT(T, T2K, T2, T3K, T3, D, B) \
+  template<class T, T2K T2, T3K T3>                                     \
+  struct D : copyable_derived< B, D<T, T2, T3> >
 
 
 

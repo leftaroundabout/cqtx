@@ -23,8 +23,8 @@ namespace_cqtxnamespace_OPEN
 
 
 
-COPYABLE_DERIVED_STRUCT(fittable_gaussianfn, fittable_phmsqfn) {
- private:
+                                                              COPYABLE_PDERIVED_CLASS(/*
+class*/fittable_gaussianfn,/*: public*/fittable_phmsqfn) {
   _4_FITVARIABLES(x, x0, sigma, A)
 //  FITVARIABLE(0, x)  FITVARIABLE(1, x0)  FITVARIABLE(2, sigma)  FITVARIABLE(3, A)
  public:
@@ -108,11 +108,127 @@ COPYABLE_DERIVED_STRUCT(fittable_gaussianfn, fittable_phmsqfn) {
 };
 
 
-COPYABLE_DERIVED_STRUCT(fittable_multigaussianfn, fittable_phmsqfn) {
- private:
+
+    //A spectrum is a fittable_phmsqfn that has one "evaluation" variable x
+   // and three "parameter" variables per peak xⱼ, σⱼ, Aⱼ. fittable_multigaussianfn is
+  //  the "prototype" spectrum; every derived spectrum should behave comparably
+ //   in the sense that the peaks are almost compactly-supported on the interval
+//    [x₀-2σ₀, x₀+2σ₀] and have an area ∫ℝ dx s(x, x₀, σ₀, A₀) ∝ A₀.
+
+                                                                              TEMPLATIZED_COPYABLE_PDERIVED_CLASS(/*
+template<class*/BaseSpectrum, int,BasepeaksPerCPeak, class,PeaksCombiner/*>
+class*/combinedPeaks_fittable_spectrum,/*: public*/fittable_phmsqfn) {
+  BaseSpectrum base_spectr            // the spectrum that's actually used for evaluating the combination 
+             , exampleparams_dummy;   // this one is only used to generate example parameters
   unsigned npeaks;
   _4_FITVARIABLES(x, x0, sigma, A)
-  NMULTIFITVARIABLES(3)    //x0, sigma and A together describe one peak.
+  NMULTIFITVARIABLES(3)    //x₀, σ and A together describe one peak.
+
+  PeaksCombiner peakscombiner;   // ≈ std::function<std::array<measure,BasepeaksPerCPeak>(measure)>
+  
+                                                                     COPYABLE_DERIVED_STRUCT(/*
+  struct*/squaredistAccel, phmsq_function) {
+    std::unique_ptr<phmsq_function> basespectr_acceld;
+    unsigned npeaks;
+    PeaksCombiner& peakscombiner;
+    
+    auto operator() (const measure& thisparams)const -> physquantity {
+      ps = &thisparams;
+      measure pass_params;
+      for(int i=0; i<npeaks; ++i){
+        measure thispeak;
+        thispeak.let(   "x0"  ) = x0(j);
+        thispeak.let("\\sigma") = sigma(j);
+        thispeak.let(   "A"   ) = A(j);
+        int j = i * BasepeaksPerCPeakl
+        for(auto& thissubpeak: peakscombiner(thispeak)) {
+          pass_params.let(   "x"    + LaTeX_subscript(j)) = thissubpeak[   "x0"  ];
+          pass_params.let("\\sigma" + LaTeX_subscript(j)) = thissubpeak["\\sigma"];
+          pass_params.let(   "A"    + LaTeX_subscript(j)) = thissubpeak[   "A"   ];
+          ++j;
+        }
+      }
+      return (*basespectr_acceld)(pass_params);
+    }
+     
+    
+  };
+  
+ public:
+  combinedPeaks_fittable_spectrum(PeaksCombiner peakscombiner, int npeaks=1)
+    : base_spectr(npeaks * BasepeaksPerCPeak)
+    , exampleparams_dummy(npeaks)
+    , npeaks(npeaks)
+    , peakscombiner(std::move(peakscombiner))                 {
+    allocate_fitvarsbuf(npeaks);
+    cptof_x("x");
+    for (unsigned i = 0; i<npeaks; ++i) {
+      cptof_x0(   i,    "x"    + LaTeX_subscript(i));
+      cptof_sigma(i, "\\sigma" + LaTeX_subscript(i));
+      cptof_A(    i,    "A"    + LaTeX_subscript(i));
+    }
+  }
+  
+  auto operator() (const measure& thisparams)const -> physquantity {
+    ps = &thisparams;
+    measure pass_params;
+    pass_params.let("x") = x();
+    for(int i=0; i<npeaks; ++i){
+      measure thispeak;
+      thispeak.let(   "x0"  ) = x0(j);
+      thispeak.let("\\sigma") = sigma(j);
+      thispeak.let(   "A"   ) = A(j);
+      int j = i * BasepeaksPerCPeakl
+      for(auto& thissubpeak: peakscombiner(thispeak)) {
+        pass_params.let(   "x"    + LaTeX_subscript(j)) = thissubpeak[   "x0"  ];
+        pass_params.let("\\sigma" + LaTeX_subscript(j)) = thissubpeak["\\sigma"];
+        pass_params.let(   "A"    + LaTeX_subscript(j)) = thissubpeak[   "A"   ];
+        ++j;
+      }
+    }
+    return base_spectr(pass_params);
+  }
+  
+  measure example_parameterset(const measure &constraints, const physquantity &desiredret) const{
+    measure pass_params; ps = &constraints;
+    if(ps->has(*cptof_x()))
+      pass_params.let("x") = x();
+    
+    for(unsigned i=0; i<npeaks; ++i) {
+      if(ps->has(*cptof_x(i)))
+        pass_params.let(   "x"    + LaTeX_subscript(i)) = x(i);
+      if(ps->has(*cptof_sigma(i)))
+        pass_params.let("\\sigma" + LaTeX_subscript(i)) = sigma(i);
+      if(ps->has(*cptof_A(i)))
+        pass_params.let(   "A"    + LaTeX_subscript(i)) = A(i);
+    }
+    
+    measure example = exampleparams_dummy.example_parameterset(pass_params, desiredret)
+          , pass_example;
+    ps = example;
+
+    if(ps->has("x"))
+      pass_example.let(*cptof_x()) = example("x");
+    
+    for(unsigned i=0; i<npeaks; ++i) {
+      if(ps->has(   "x"    + LaTeX_subscript(i)))
+        pass_example.let(*cptof_x(i))     = example[   "x"    + LaTeX_subscript(i)];
+      if(ps->has("\\sigma" + LaTeX_subscript(i))  )
+        pass_example.let(*cptof_sigma(i)) = example["\\sigma" + LaTeX_subscript(i)];
+      if(ps->has(   "A"    + LaTeX_subscript(i)))
+        pass_example.let(*cptof_A(i))     = example[   "A"    + LaTeX_subscript(i)];
+    }
+    return pass_example
+  }
+};
+
+
+
+COPYABLE_PDERIVED_CLASS(/*
+class*/fittable_multigaussianfn,/*: public*/fittable_phmsqfn) {
+  unsigned npeaks;
+  _4_FITVARIABLES(x, x0, sigma, A)
+  NMULTIFITVARIABLES(3)
  public:
   fittable_multigaussianfn(int nnpeaks=1): npeaks(nnpeaks) {
     allocate_fitvarsbuf(npeaks);
@@ -140,7 +256,7 @@ COPYABLE_DERIVED_STRUCT(fittable_multigaussianfn, fittable_phmsqfn) {
 
   auto
   squaredist_accel(const measureseq& fixedparams, const msq_dereferencer& retcomp_drf)const
-            -> maybe<squaredistAccelerator> {
+            -> p_maybe<phmsq_function> {
              
     assert(fixedparams.size() > 0);
     ps = &fixedparams.front();
@@ -281,7 +397,7 @@ COPYABLE_DERIVED_STRUCT(fittable_multigaussianfn, fittable_phmsqfn) {
             example.push_back( sigma(i) .plusminus (sigma(i))  .label(*cptof_x0(i)) );
            }else{
             cerr << "Insufficient constraints to determine the dimension of offset "
-                 << *cptof_x0(i) << " or width " << *cptof_sigma(i) << " of gaussian function\n";
+                 << *cptof_x0(i) << " or width " << *cptof_sigma(i) << " of spectrum function\n";
             goto insufficient;
           }
         }
@@ -314,8 +430,9 @@ COPYABLE_DERIVED_STRUCT(fittable_multigaussianfn, fittable_phmsqfn) {
 
 
 
-COPYABLE_DERIVED_STRUCT(fittable_exponentialfn, fittable_phmsqfn) {
- private:
+
+                                                               COPYABLE_PDERIVED_CLASS(/*
+class*/fittable_exponentialfn,/*: public*/fittable_phmsqfn) {
   _3_FITVARIABLES(x, lambda, A)
  public:
   fittable_exponentialfn() { allocate_fitvarsbuf();
@@ -361,6 +478,10 @@ COPYABLE_DERIVED_STRUCT(fittable_exponentialfn, fittable_phmsqfn) {
   }
  
 };
+
+
+
+
 
 
 namespace_cqtxnamespace_CLOSE

@@ -82,6 +82,7 @@ class phmsq_function_base{
     }
   }
   virtual phmsq_function_base* clone() const=0;      //for copy-by-baseobjpointer-able derived objects
+  virtual phmsq_function_base* moved() =0;
   virtual ~phmsq_function_base() {}
 
  // template <class NonevaledFn>
@@ -188,6 +189,9 @@ class wrapped_compactsupport_phqfn: public phmsq_function {
     cerr.flush();   // as the next instruction is likely to crash the program
     return nullptr;
   }
+  phmsq_function_base<physquantity> *moved() {
+    return new wrapped_compactsupport_phqfn(*wrappedfn);
+  }
   measure example_parameterset() const{
     return measure(wrappedfn->support().location().wlabel(*argdrfs[0]));
   }
@@ -242,7 +246,7 @@ class fittable_phmsqfn : public phmsq_function{
 
   virtual auto
   squaredist_accel(const measureseq& fixedparams, const msq_dereferencer& retlk)const
-                    -> maybe<squaredistAccelerator> {
+                    -> p_maybe<phmsq_function> {
     return nothing;
   }
 
@@ -317,6 +321,7 @@ class fittable_phmsqfn : public phmsq_function{
   }
   virtual measure example_parameterset(const physquantity &desiredret) const { return example_parameterset(measure(), desiredret); } 
   virtual fittable_phmsqfn* clone() const=0;      //for copy-by-baseobjpointer-able derived objects
+  virtual fittable_phmsqfn* moved() =0;
 };
 
 
@@ -345,11 +350,21 @@ auto fittable_phmsqfn
                            -> squaredistAccelerator                            {
     return squaredistAccelerator(std::move(ah), vadfs, vus);                   }
 
-// TEMPLATIZED_COPYABLE_DERIVED_STRUCT( base_phmsqfn
-//                                    , phmsqfitfn_paramRemap
-//                                    , fittable_phmsqfn      ) {
-//   
+
+//                                              TEMPLATIZED_COPYABLE_PDERIVED_CLASS(/*
+// template<class*/base_phmsqfn/*>
+// class*/,phmsqfitfn_paramRemap, fittable_phmsqfn                                 ) {
+//   base_phmsqfn base_fun;
+//   virtual auto paramremap(const measure& nparams) -> measure =0;
+//  public:
+//   auto operator() (const measure& thisparams) -> physquantity {
+//     return base_fun(paramremap(thisparams));
+//   }
+//   phmsqfitfn_paramRemap(base_phmsqfn base_fun)
+//     : base_fun(std::move(base_fun))
+//   {}
 // }
+
 
    //evaluate the average square distance between some measure values and a
   // fit function trying to describe those values though some fit parameters.
@@ -359,7 +374,7 @@ COPYABLE_PDERIVED_CLASS(fitdist_fntomeasures, phmsq_function) {
   measureseq ftgt;
   measure constargs;
   std::unique_ptr<fittable_phmsqfn> f;
-  maybe<fittable_phmsqfn::squaredistAccelerator> accelerated;
+  p_maybe<phmsq_function> accelerated;
   msqDereferencer returndrf;
   bool take_fnreturns_as_exact;
 
@@ -652,6 +667,7 @@ class nonholonomic_optimizationconstraint: public boolean_phmsq_function {
  public:
   virtual void make_conformant(measure &trial) const=0;
   virtual nonholonomic_optimizationconstraint* clone() const=0;
+  virtual nonholonomic_optimizationconstraint* moved() =0;
 };
 
 COPYABLE_DERIVED_STRUCT(trivial_nonholonomic_optimizationconstraint, nonholonomic_optimizationconstraint) {

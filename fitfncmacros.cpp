@@ -38,8 +38,7 @@ const unsigned multifitvariables_spacing = 0;
 #define NMULTIFITVARIABLES(n) static const unsigned multifitvariables_spacing = n;
 
 #define NORMAL_FITTINGFUNCTION(caption, declarations, allocations, definition) \
-COPYABLE_DERIVED_STRUCT(caption##function, fittable_phmsqfn) {                 \
- private:                                                                      \
+COPYABLE_PDERIVED_CLASS(caption##function, fittable_phmsqfn) {                 \
   declarations                                                                 \
  public:                                                                       \
   caption##function() { allocate_fitvarsbuf();                                 \
@@ -67,10 +66,12 @@ NORMAL_FITTINGFUNCTION( fncapt                                \
   , fndefinition                                              \
 )
 
-/*   \\original form
+
+
+// old form
+#if 0
 #define FITTINGFUNCTION__4_VARIABLES(fncapt,vc1,vn1,vc2,vn2,vc3,vn3,vc4,vn4,fndefinition) \
-COPYABLE_DERIVED_STRUCT(fncapt, fittable_phmsqfn) {                                       \
- private:                                                                                 \
+COPYABLE_PDERIVED_CLASS(fncapt, fittable_phmsqfn) {                                       \
   _4_FITVARIABLES(vc1, vc2, vc3, vc4)                                                     \
  public:                                                                                  \
   fncapt() { allocate_fitvarsbuf();                                                       \
@@ -81,4 +82,55 @@ COPYABLE_DERIVED_STRUCT(fncapt, fittable_phmsqfn) {                             
     fndefinition                                                                          \
   }                                                                                       \
 };
-*/
+#endif
+
+
+
+
+
+   // attempt to define a general remapping, i.e. transforming a function
+  //  f(x,y,z) to something like g(w,q) := f(w, w-q, q). It turns out to be defficult
+ //   to do this as a macro, probably not feasible.
+#if 0
+#define NORMAL_MULTIREMAPPED_FITTINGFUNCTION(caption, origfunction, declarations, allocations, definition) \
+COPYABLE_PDERIVED_CLASS(caption##function, fittable_phmsqfn) {                 \
+  declarations                                                                 \
+  origfunction original_fn;                                                    \
+  
+  COPYABLE_DERIVED_STRUCT(squaredist_acceled, phmsq_function) {
+    declarations
+    origfunction original_fn;
+    physquantity operator() (const measure& thisparams) const{
+      measure mdfparams = thisparams;
+      ps = &mdfparams;
+      definition
+      return original_fn(mdfparams);
+    }
+  };
+ public:                                                                       \
+  auto                                                                         \
+  squaredist_accel( const measureseq& fixedparams                              \
+                  , const msq_dereferencer& retcomp_drf) const                 \
+           -> p_maybe<phmsq_function> {                                        \
+    for(auto& acc: original_fn.squaredist_accel(fixedparams, retcomp_drf)) {
+      return squaredist_acceled
+    }
+    measureseq procd_params(fixedparams.size());                               \
+    for(int i = 0; i < fixedparams.size(); ++i) {
+      ps = &fixedparams[i]; rs = &procd_params[i];
+      try {
+        definition
+       }catch(...) {
+        return nothing;
+      }
+    }
+  }
+  caption##function() { allocate_fitvarsbuf();                                 \
+    allocations                                                                \
+  }                                                                            \
+  physquantity operator() (const measure &thisparams) const{                   \
+    ps = &thisparams;                                                          \
+    definition                                                                 \
+  }                                                                            \
+}caption;
+#endif
