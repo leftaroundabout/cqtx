@@ -336,10 +336,10 @@ class*/combinedPeaks_fittable_spectrum,/*: public*/fittable_phmsqfn) {
   PeaksCombiner peakscombiner;
   
                                                                      COPYABLE_DERIVED_STRUCT(/*
-  struct*/squaredistAccel, phmsq_function) {
+  struct*/squaredistAccel,/*: public*/phmsq_function) {
     _3_FITVARIABLES(x0, sigma, A)
     NMULTIFITVARIABLES(3)
-    std::unique_ptr<phmsq_function> basespectr_acceld;
+    std::shared_ptr<phmsq_function> basespectr_acceld;
     unsigned npeaks, basepeaks_per_cpeak;
     PeaksCombiner peakscombiner;
     
@@ -361,7 +361,21 @@ class*/combinedPeaks_fittable_spectrum,/*: public*/fittable_phmsqfn) {
       }
       return (*basespectr_acceld)(pass_params);
     }
-     
+    
+    squaredistAccel( std::unique_ptr<phmsq_function> basespectr_acceld
+                   , unsigned basepeaks_per_cpeak
+                   , PeaksCombiner peakscombiner
+                   , const std::vector<std::array<std::string, 3>>& param_captions )
+      : basespectr_acceld(std::move(basespectr_acceld))
+      , npeaks(param_captions.size()), basepeaks_per_cpeak(basepeaks_per_cpeak)
+      , peakscombiner(std::move(peakscombiner))                                   {
+      allocate_fitvarsbuf(npeaks);
+      for (unsigned i = 0; i<npeaks; ++i) {
+        cptof_x0(   i, param_captions[i][0] );
+        cptof_sigma(i, param_captions[i][1] ); 
+        cptof_A(    i, param_captions[i][2] );
+      }
+    }
     
   };
   
@@ -370,7 +384,7 @@ class*/combinedPeaks_fittable_spectrum,/*: public*/fittable_phmsqfn) {
   combinedPeaks_fittable_spectrum( BaseSpectrum base_spectr
                                  , int basepeaks_per_cpeak
                                  , PeaksCombiner peakscombiner
-                                 , int npeaks=1)
+                                 , int npeaks=1                )
     : base_spectr(base_spectr.moved())
     , exampleparams_dummy(npeaks)
     , npeaks(npeaks), basepeaks_per_cpeak(basepeaks_per_cpeak)
@@ -402,6 +416,37 @@ class*/combinedPeaks_fittable_spectrum,/*: public*/fittable_phmsqfn) {
       }
     }
     return (*base_spectr)(pass_params);
+  }
+  
+  auto
+  squaredist_accel(const measureseq& fixedparams, const msq_dereferencer& retcomp_drf)const
+            -> p_maybe<phmsq_function> {
+    measureseq pass_fixedps;
+    for(auto& axs: fixedparams) {
+      ps = &axs;
+      pass_fixedps.push_back(measure());
+      if(axs.has(*cptof_x())) {
+        pass_fixedps.back().let("x") = x();
+      }else return nothing;
+      if(auto rt = retcomp_drf.tryfind(axs)) {
+        pass_fixedps.back().let("I") = *rt;
+      }else return nothing;
+    }
+    auto delegated = base_spectr->squaredist_accel(pass_fixedps, captfinder("I"));
+    if(delegated.is_nothing()) return nothing;
+    
+    std::vector<std::array<std::string, 3>> accelcaptions;
+    for(unsigned i=0; i<npeaks; ++i) {
+      accelcaptions.push_back(std::array<std::string, 3>
+               {{ *cptof_x0(i), *cptof_sigma(i), *cptof_A(i) }});
+    }
+    
+    return just (
+       squaredistAccel( std::unique_ptr<phmsq_function>((*delegated).moved())
+                      , basepeaks_per_cpeak
+                      , peakscombiner
+                      , accelcaptions                                         )
+           );
   }
   
   measure example_parameterset(const measure &constraints, const physquantity &desiredret) const{

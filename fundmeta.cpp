@@ -24,6 +24,7 @@ class copyable_derived: public Base {
   virtual Base *moved() override {
     return new Derived(static_cast<Derived&&>(std::move(*this)));
   }
+  virtual ~copyable_derived() override {}
 };
 
 
