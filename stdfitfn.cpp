@@ -115,116 +115,9 @@ class*/fittable_gaussianfn,/*: public*/fittable_phmsqfn) {
  //   in the sense that the peaks are almost compactly-supported on the interval
 //    [x₀-2σ₀, x₀+2σ₀] and have an area ∫ℝ dx s(x, x₀, σ₀, A₀) ∝ A₀.
 
-                                                                              TEMPLATIZED_COPYABLE_PDERIVED_CLASS(/*
-template<class*/BaseSpectrum, int,BasepeaksPerCPeak, class,PeaksCombiner/*>
-class*/combinedPeaks_fittable_spectrum,/*: public*/fittable_phmsqfn) {
-  BaseSpectrum base_spectr            // the spectrum that's actually used for evaluating the combination 
-             , exampleparams_dummy;   // this one is only used to generate example parameters
-  unsigned npeaks;
-  _4_FITVARIABLES(x, x0, sigma, A)
-  NMULTIFITVARIABLES(3)    //x₀, σ and A together describe one peak.
-
-  PeaksCombiner peakscombiner;   // ≈ std::function<std::array<measure,BasepeaksPerCPeak>(measure)>
-  
-                                                                     COPYABLE_DERIVED_STRUCT(/*
-  struct*/squaredistAccel, phmsq_function) {
-    std::unique_ptr<phmsq_function> basespectr_acceld;
-    unsigned npeaks;
-    PeaksCombiner& peakscombiner;
-    
-    auto operator() (const measure& thisparams)const -> physquantity {
-      ps = &thisparams;
-      measure pass_params;
-      for(int i=0; i<npeaks; ++i){
-        measure thispeak;
-        thispeak.let(   "x0"  ) = x0(j);
-        thispeak.let("\\sigma") = sigma(j);
-        thispeak.let(   "A"   ) = A(j);
-        int j = i * BasepeaksPerCPeakl
-        for(auto& thissubpeak: peakscombiner(thispeak)) {
-          pass_params.let(   "x"    + LaTeX_subscript(j)) = thissubpeak[   "x0"  ];
-          pass_params.let("\\sigma" + LaTeX_subscript(j)) = thissubpeak["\\sigma"];
-          pass_params.let(   "A"    + LaTeX_subscript(j)) = thissubpeak[   "A"   ];
-          ++j;
-        }
-      }
-      return (*basespectr_acceld)(pass_params);
-    }
-     
-    
-  };
-  
- public:
-  combinedPeaks_fittable_spectrum(PeaksCombiner peakscombiner, int npeaks=1)
-    : base_spectr(npeaks * BasepeaksPerCPeak)
-    , exampleparams_dummy(npeaks)
-    , npeaks(npeaks)
-    , peakscombiner(std::move(peakscombiner))                 {
-    allocate_fitvarsbuf(npeaks);
-    cptof_x("x");
-    for (unsigned i = 0; i<npeaks; ++i) {
-      cptof_x0(   i,    "x"    + LaTeX_subscript(i));
-      cptof_sigma(i, "\\sigma" + LaTeX_subscript(i));
-      cptof_A(    i,    "A"    + LaTeX_subscript(i));
-    }
-  }
-  
-  auto operator() (const measure& thisparams)const -> physquantity {
-    ps = &thisparams;
-    measure pass_params;
-    pass_params.let("x") = x();
-    for(int i=0; i<npeaks; ++i){
-      measure thispeak;
-      thispeak.let(   "x0"  ) = x0(j);
-      thispeak.let("\\sigma") = sigma(j);
-      thispeak.let(   "A"   ) = A(j);
-      int j = i * BasepeaksPerCPeakl
-      for(auto& thissubpeak: peakscombiner(thispeak)) {
-        pass_params.let(   "x"    + LaTeX_subscript(j)) = thissubpeak[   "x0"  ];
-        pass_params.let("\\sigma" + LaTeX_subscript(j)) = thissubpeak["\\sigma"];
-        pass_params.let(   "A"    + LaTeX_subscript(j)) = thissubpeak[   "A"   ];
-        ++j;
-      }
-    }
-    return base_spectr(pass_params);
-  }
-  
-  measure example_parameterset(const measure &constraints, const physquantity &desiredret) const{
-    measure pass_params; ps = &constraints;
-    if(ps->has(*cptof_x()))
-      pass_params.let("x") = x();
-    
-    for(unsigned i=0; i<npeaks; ++i) {
-      if(ps->has(*cptof_x(i)))
-        pass_params.let(   "x"    + LaTeX_subscript(i)) = x(i);
-      if(ps->has(*cptof_sigma(i)))
-        pass_params.let("\\sigma" + LaTeX_subscript(i)) = sigma(i);
-      if(ps->has(*cptof_A(i)))
-        pass_params.let(   "A"    + LaTeX_subscript(i)) = A(i);
-    }
-    
-    measure example = exampleparams_dummy.example_parameterset(pass_params, desiredret)
-          , pass_example;
-    ps = example;
-
-    if(ps->has("x"))
-      pass_example.let(*cptof_x()) = example("x");
-    
-    for(unsigned i=0; i<npeaks; ++i) {
-      if(ps->has(   "x"    + LaTeX_subscript(i)))
-        pass_example.let(*cptof_x(i))     = example[   "x"    + LaTeX_subscript(i)];
-      if(ps->has("\\sigma" + LaTeX_subscript(i))  )
-        pass_example.let(*cptof_sigma(i)) = example["\\sigma" + LaTeX_subscript(i)];
-      if(ps->has(   "A"    + LaTeX_subscript(i)))
-        pass_example.let(*cptof_A(i))     = example[   "A"    + LaTeX_subscript(i)];
-    }
-    return pass_example
-  }
-};
 
 
-
-COPYABLE_PDERIVED_CLASS(/*
+                                                                   COPYABLE_PDERIVED_CLASS(/*
 class*/fittable_multigaussianfn,/*: public*/fittable_phmsqfn) {
   unsigned npeaks;
   _4_FITVARIABLES(x, x0, sigma, A)
@@ -428,6 +321,121 @@ class*/fittable_multigaussianfn,/*: public*/fittable_phmsqfn) {
   
 };
 
+
+                                                                              COPYABLE_PDERIVED_CLASS(/*
+class*/combinedPeaks_fittable_spectrum,/*: public*/fittable_phmsqfn) {
+  std::unique_ptr<fittable_phmsqfn> base_spectr; // the spectrum that's actually used for evaluating the combination 
+  fittable_multigaussianfn exampleparams_dummy;  // this one is only used to generate example parameters
+  unsigned npeaks, basepeaks_per_cpeak;
+  _4_FITVARIABLES(x, x0, sigma, A)
+  NMULTIFITVARIABLES(3)    //x₀, σ and A together describe one peak.
+
+ public:
+  typedef std::function<std::vector<measure>(measure)> PeaksCombiner;
+ private:
+  PeaksCombiner peakscombiner;
+  
+                                                                     COPYABLE_DERIVED_STRUCT(/*
+  struct*/squaredistAccel, phmsq_function) {
+    _3_FITVARIABLES(x0, sigma, A)
+    NMULTIFITVARIABLES(3)
+    std::unique_ptr<phmsq_function> basespectr_acceld;
+    unsigned npeaks, basepeaks_per_cpeak;
+    PeaksCombiner peakscombiner;
+    
+    auto operator() (const measure& thisparams)const -> physquantity {
+      ps = &thisparams;
+      measure pass_params;
+      for(unsigned i=0; i<npeaks; ++i){
+        measure thispeak;
+        thispeak.let(   "x0"  ) = x0(i);
+        thispeak.let("\\sigma") = sigma(i);
+        thispeak.let(   "A"   ) = A(i);
+        unsigned j = i * basepeaks_per_cpeak;
+        for(auto& thissubpeak: peakscombiner(thispeak)) {
+          pass_params.let(   "x"    + LaTeX_subscript(j)) = thissubpeak[   "x0"  ];
+          pass_params.let("\\sigma" + LaTeX_subscript(j)) = thissubpeak["\\sigma"];
+          pass_params.let(   "A"    + LaTeX_subscript(j)) = thissubpeak[   "A"   ];
+          ++j;
+        }
+      }
+      return (*basespectr_acceld)(pass_params);
+    }
+     
+    
+  };
+  
+ public:
+  template<class BaseSpectrum>
+  combinedPeaks_fittable_spectrum( BaseSpectrum base_spectr
+                                 , int basepeaks_per_cpeak
+                                 , PeaksCombiner peakscombiner
+                                 , int npeaks=1)
+    : base_spectr(base_spectr.moved())
+    , exampleparams_dummy(npeaks)
+    , npeaks(npeaks), basepeaks_per_cpeak(basepeaks_per_cpeak)
+    , peakscombiner(std::move(peakscombiner))                  {
+    allocate_fitvarsbuf(npeaks);
+    cptof_x("x");
+    for (unsigned i = 0; i<npeaks; ++i) {
+      cptof_x0(   i,    "x"    + LaTeX_subscript(i));
+      cptof_sigma(i, "\\sigma" + LaTeX_subscript(i));
+      cptof_A(    i,    "A"    + LaTeX_subscript(i));
+    }
+  }
+  
+  auto operator() (const measure& thisparams)const -> physquantity {
+    ps = &thisparams;
+    measure pass_params;
+    pass_params.let("x") = x();
+    for(unsigned i=0; i<npeaks; ++i){
+      measure thispeak;
+      thispeak.let(   "x0"  ) = x0(i);
+      thispeak.let("\\sigma") = sigma(i);
+      thispeak.let(   "A"   ) = A(i);
+      unsigned j = i * basepeaks_per_cpeak;
+      for(auto& thissubpeak: peakscombiner(thispeak)) {
+        pass_params.let(   "x"    + LaTeX_subscript(j)) = thissubpeak[   "x0"  ];
+        pass_params.let("\\sigma" + LaTeX_subscript(j)) = thissubpeak["\\sigma"];
+        pass_params.let(   "A"    + LaTeX_subscript(j)) = thissubpeak[   "A"   ];
+        ++j;
+      }
+    }
+    return (*base_spectr)(pass_params);
+  }
+  
+  measure example_parameterset(const measure &constraints, const physquantity &desiredret) const{
+    measure pass_params; ps = &constraints;
+    if(ps->has(*cptof_x()))
+      pass_params.let("x") = x();
+    
+    for(unsigned i=0; i<npeaks; ++i) {
+      if(ps->has(*cptof_x(i)))
+        pass_params.let(   "x"    + LaTeX_subscript(i)) = x(i);
+      if(ps->has(*cptof_sigma(i)))
+        pass_params.let("\\sigma" + LaTeX_subscript(i)) = sigma(i);
+      if(ps->has(*cptof_A(i)))
+        pass_params.let(   "A"    + LaTeX_subscript(i)) = A(i);
+    }
+    
+    measure example = exampleparams_dummy.example_parameterset(pass_params, desiredret)
+          , pass_example;
+    ps = &example;
+
+    if(ps->has("x"))
+      pass_example.let(*cptof_x()) = example["x"];
+    
+    for(unsigned i=0; i<npeaks; ++i) {
+      if(ps->has(   "x"    + LaTeX_subscript(i)))
+        pass_example.let(*cptof_x(i))     = example[   "x"    + LaTeX_subscript(i)];
+      if(ps->has("\\sigma" + LaTeX_subscript(i))  )
+        pass_example.let(*cptof_sigma(i)) = example["\\sigma" + LaTeX_subscript(i)];
+      if(ps->has(   "A"    + LaTeX_subscript(i)))
+        pass_example.let(*cptof_A(i))     = example[   "A"    + LaTeX_subscript(i)];
+    }
+    return pass_example;
+  }
+};
 
 
 

@@ -3,13 +3,13 @@ all: bin/phqdumpview lib/squdistaccel.o lib/squdistaccel-fns.o
 install: all
 	cp bin/phqdumpview /usr/local/bin
 
-CPPC = g++-4.6
+CPPC = g++-4.7
 CPPCFlags= $(miscflags) $(optimizations) $(warnings) $(CPPincludes)
 CPPincludes = -I $(cqtxheader)
 cqtxheader = /media/misc/progwrit/cpp/cqtx
 optimizations= -march=native -DCUDA_ACCELERATION # -O2 -ffast-math
 warnings= -Wall
-miscflags= --std=c++0x -g
+miscflags= --std=c++11 -g
 
 CUDAC = nvcc
 CUDACFlags = $(CUDAincludes) $(CUDAarch) -O2
