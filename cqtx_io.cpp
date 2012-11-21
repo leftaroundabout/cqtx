@@ -678,7 +678,7 @@ namespace QTeXgrcolors {
 
 class QTeXgrofstream : protected ofstream {  //Inheritance is handled improperly here.
                                             // Yet to fix!
-  union {double dbl; unsigned short int intg; char chr;};
+  union {double dbl; uint32_t intg; char chr;};
  protected:
 
   QTeXgrofstream &open(const string &nfname){
@@ -688,7 +688,7 @@ class QTeXgrofstream : protected ofstream {  //Inheritance is handled improperly
 //  QTeXgrofstream(const QTeXgrofstream &src){}
   QTeXgrofstream(){}
  public:
-  QTeXgrofstream &iwrite(const int &Numtw){
+  QTeXgrofstream &iwrite(const int& Numtw){
     intg = Numtw; write(&chr, sizeof intg);
     return(*this);
   }
@@ -1072,6 +1072,71 @@ template <typename arg_T, typename ret_T>
 phGraphScreen rasterize(const compactsupportfn<arg_T, ret_T> &, int raster);
 
 
+void qdafilecleanup(const std::string& fname) {
+  std::ifstream qdafile(fname.c_str(), std::ios::binary);
+  
+  if(!!qdafile) {
+
+    auto read_uint16 = [&]() -> uint16_t {
+           uint16_t res; qdafile.read((char*) &res, sizeof(uint16_t)); return res;
+         };
+    auto read_string = [&]() -> std::string {
+           auto strlength = read_uint16();
+           std::vector<char> resbuf(strlength+1, '\0');
+           qdafile.read(resbuf.data(), strlength);
+           return resbuf.data();
+         };
+    auto read_double = [&]() -> double {
+           double res; qdafile.read((char*) &res, sizeof(double)); return res;
+         };
+
+    while(!qdafile.eof()) {
+      char objtypechar = qdafile.get();
+      if(!qdafile) break;
+      switch(objtypechar) {
+       
+       case 'g': {
+          auto embeddedfile = read_string();
+//           std::cout << "found embedded graph file \"" << embeddedfile << "\". Delete.\n";
+          remove(embeddedfile.c_str());
+          /*auto clrid =*/read_uint16();
+          break;
+        }
+       case 'c': {
+//           std::cout << "found 2d-measure. Ignore.\n"; 
+          for(unsigned i=0; i<2; ++i) {
+            char pd_objtypechar = qdafile.get();
+            if(pd_objtypechar=='f') {
+              /*auto vlcpt   =*/read_string();
+              /*auto value   =*/read_double();
+              /*auto verror  =*/read_double();
+              /*auto unitcapt=*/read_string();
+            }
+          }
+          break;
+        }
+       default: { // apparently, this also reads two measures but disregards caption and unit.
+                 //  FIXME
+//           std::cout << "found something unexpected (obj-T-ID \'" << objtypechar << "\'). Ignore.\n"; 
+          for(unsigned i=0; i<2; ++i) {
+            char pd_objtypechar = qdafile.get();
+            if(pd_objtypechar=='f') {
+              /*auto vlcpt    =*/read_string();
+              /*auto value    =*/read_double();
+              /*auto verror   =*/read_double();
+              /*auto unitcapt =*/read_string();
+            }
+          }
+        }
+      }
+    }
+  
+    qdafile.close();
+    remove(fname.c_str());
+  }
+}
+
+
 class QTeXdiagmaster : QTeXgrofstream {
   physquantity lcbord,rcbord,ucbord,dcbord;
   physquantity width, height;
@@ -1083,9 +1148,10 @@ class QTeXdiagmaster : QTeXgrofstream {
   QTeXgrcolor nextcolorcandidate;
 
   void cleanupandopenfile(const string &nfname) {
-    int donotthrowbutaway = system(("qdafilecleanup " + nfname).c_str());
+    qdafilecleanup(nfname);
+    // int donotthrowbutaway = system(("qdafilecleanup " + nfname).c_str());
+    // if (donotthrowbutaway);
     QTeXgrofstream::open(nfname);
-    if (donotthrowbutaway);
   }
 
  public:

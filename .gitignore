@@ -16,5 +16,14 @@
 *bup*
 *~
 
+# Binaries
+bin/*
+test/bin/*
+
+# primitive graphic output
+*.BMP
+*.qda
+*.qcv
+
 # Swap junk files introduced by certain file systems
 *.swp

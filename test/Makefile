@@ -1,4 +1,4 @@
-all: bin/sqd_accel
+all: bin/sqd_accel bin/qdafilecleanup 
 
 CXXC = g++-4.6
 CXXCFlags= $(miscflags) $(optimizations) $(warnings) $(CXXincludes)
@@ -27,3 +27,8 @@ bin/sqd_accel : sqd_accel.cpp $(CQTXpath)/*.?pp $(CQTXpath)/*cu
 	$(CXXC) -c $< $(CXXCFlags)
 	$(CC) -o $@ sqd_accel.o $(CQTXlibs) $(CUDAlibs)
 	@rm sqd_accel.o
+
+bin/qdafilecleanup : qdafilecleanup.cpp $(CQTXpath)/*.?pp
+	$(CXXC) -c $< $(CXXCFlags)
+	$(CC) -o $@ qdafilecleanup.o $(CQTXlibs) $(CUDAlibs)
+	@rm qdafilecleanup.o

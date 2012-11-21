@@ -12,7 +12,9 @@
   // You should have received a copy of the GNU General Public License
  //  along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
-
+#if __cplusplus < 201103L // not fully C++11-compliant compilers will not understand
+  #define override       //  the override keyword. Ignore in this case.
+#endif
 
                                       //template for derived classes that are supposed
 template< class Base, class Derived >// to be copyable from only a base class pointer.

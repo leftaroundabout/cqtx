@@ -327,11 +327,14 @@ class*/combinedPeaks_fittable_spectrum,/*: public*/fittable_phmsqfn) {
   std::unique_ptr<fittable_phmsqfn> base_spectr; // the spectrum that's actually used for evaluating the combination 
   fittable_multigaussianfn exampleparams_dummy;  // this one is only used to generate example parameters
   unsigned npeaks, basepeaks_per_cpeak;
+  
+  std::string intern_x0caption, intern_sigmacaption, intern_Acaption;
+  
   _4_FITVARIABLES(x, x0, sigma, A)
   NMULTIFITVARIABLES(3)    //x₀, σ and A together describe one peak.
 
  public:
-  typedef std::function<std::vector<measure>(measure)> PeaksCombiner;
+  typedef std::function<std::vector<measure>(const measure&)> PeaksCombiner;
  private:
   PeaksCombiner peakscombiner;
   
@@ -341,6 +344,7 @@ class*/combinedPeaks_fittable_spectrum,/*: public*/fittable_phmsqfn) {
     NMULTIFITVARIABLES(3)
     std::shared_ptr<phmsq_function> basespectr_acceld;
     unsigned npeaks, basepeaks_per_cpeak;
+    std::string intern_x0caption, intern_sigmacaption, intern_Acaption;
     PeaksCombiner peakscombiner;
     
     auto operator() (const measure& thisparams)const -> physquantity {
@@ -348,14 +352,14 @@ class*/combinedPeaks_fittable_spectrum,/*: public*/fittable_phmsqfn) {
       measure pass_params;
       for(unsigned i=0; i<npeaks; ++i){
         measure thispeak;
-        thispeak.let(   "x0"  ) = x0(i);
-        thispeak.let("\\sigma") = sigma(i);
-        thispeak.let(   "A"   ) = A(i);
+        thispeak.let(intern_x0caption   ) = x0(i);
+        thispeak.let(intern_sigmacaption) = sigma(i);
+        thispeak.let(intern_Acaption    ) = A(i);
         unsigned j = i * basepeaks_per_cpeak;
         for(auto& thissubpeak: peakscombiner(thispeak)) {
-          pass_params.let(   "x"    + LaTeX_subscript(j)) = thissubpeak[   "x0"  ];
-          pass_params.let("\\sigma" + LaTeX_subscript(j)) = thissubpeak["\\sigma"];
-          pass_params.let(   "A"    + LaTeX_subscript(j)) = thissubpeak[   "A"   ];
+          pass_params.let(   "x"    + LaTeX_subscript(j)) = thissubpeak[intern_x0caption   ];
+          pass_params.let("\\sigma" + LaTeX_subscript(j)) = thissubpeak[intern_sigmacaption];
+          pass_params.let(   "A"    + LaTeX_subscript(j)) = thissubpeak[intern_Acaption    ];
           ++j;
         }
       }
@@ -365,6 +369,9 @@ class*/combinedPeaks_fittable_spectrum,/*: public*/fittable_phmsqfn) {
     squaredistAccel( std::unique_ptr<phmsq_function> basespectr_acceld
                    , unsigned basepeaks_per_cpeak
                    , PeaksCombiner peakscombiner
+                   , std::string intern_x0caption
+                   , std::string intern_sigmacaption
+                   , std::string intern_Acaption
                    , const std::vector<std::array<std::string, 3>>& param_captions )
       : basespectr_acceld(std::move(basespectr_acceld))
       , npeaks(param_captions.size()), basepeaks_per_cpeak(basepeaks_per_cpeak)
@@ -382,13 +389,34 @@ class*/combinedPeaks_fittable_spectrum,/*: public*/fittable_phmsqfn) {
  public:
   template<class BaseSpectrum>
   combinedPeaks_fittable_spectrum( BaseSpectrum base_spectr
-                                 , int basepeaks_per_cpeak
+                                 , unsigned basepeaks_per_cpeak
                                  , PeaksCombiner peakscombiner
-                                 , int npeaks=1                )
+                                 , std::string intern_x0caption
+                                 , std::string intern_sigmacaption
+                                 , std::string intern_Acaption
+                                 , unsigned npeaks=1                )
     : base_spectr(base_spectr.moved())
     , exampleparams_dummy(npeaks)
     , npeaks(npeaks), basepeaks_per_cpeak(basepeaks_per_cpeak)
+    , intern_x0caption(intern_x0caption), intern_sigmacaption(intern_sigmacaption), intern_Acaption(intern_Acaption)
     , peakscombiner(std::move(peakscombiner))                  {
+    allocate_fitvarsbuf(npeaks);
+    cptof_x("x");
+    for (unsigned i = 0; i<npeaks; ++i) {
+      cptof_x0(   i,    "x"    + LaTeX_subscript(i));
+      cptof_sigma(i, "\\sigma" + LaTeX_subscript(i));
+      cptof_A(    i,    "A"    + LaTeX_subscript(i));
+    }
+  }
+  
+  combinedPeaks_fittable_spectrum(
+      const combinedPeaks_fittable_spectrum& cpy)
+    : base_spectr(cpy.base_spectr->clone())
+    , exampleparams_dummy(cpy.npeaks)
+    , npeaks(cpy.npeaks)
+    , basepeaks_per_cpeak(cpy.basepeaks_per_cpeak)
+    , intern_x0caption(cpy.intern_x0caption), intern_sigmacaption(cpy.intern_sigmacaption), intern_Acaption(cpy.intern_Acaption)
+    , peakscombiner(cpy.peakscombiner) {
     allocate_fitvarsbuf(npeaks);
     cptof_x("x");
     for (unsigned i = 0; i<npeaks; ++i) {
@@ -404,14 +432,14 @@ class*/combinedPeaks_fittable_spectrum,/*: public*/fittable_phmsqfn) {
     pass_params.let("x") = x();
     for(unsigned i=0; i<npeaks; ++i){
       measure thispeak;
-      thispeak.let(   "x0"  ) = x0(i);
-      thispeak.let("\\sigma") = sigma(i);
-      thispeak.let(   "A"   ) = A(i);
+      thispeak.let(intern_x0caption   ) = x0(i);
+      thispeak.let(intern_sigmacaption) = sigma(i);
+      thispeak.let(intern_Acaption    ) = A(i);
       unsigned j = i * basepeaks_per_cpeak;
       for(auto& thissubpeak: peakscombiner(thispeak)) {
-        pass_params.let(   "x"    + LaTeX_subscript(j)) = thissubpeak[   "x0"  ];
-        pass_params.let("\\sigma" + LaTeX_subscript(j)) = thissubpeak["\\sigma"];
-        pass_params.let(   "A"    + LaTeX_subscript(j)) = thissubpeak[   "A"   ];
+        pass_params.let(   "x"    + LaTeX_subscript(j)) = thissubpeak[intern_x0caption   ];
+        pass_params.let("\\sigma" + LaTeX_subscript(j)) = thissubpeak[intern_sigmacaption];
+        pass_params.let(   "A"    + LaTeX_subscript(j)) = thissubpeak[intern_Acaption    ];
         ++j;
       }
     }
@@ -445,6 +473,7 @@ class*/combinedPeaks_fittable_spectrum,/*: public*/fittable_phmsqfn) {
        squaredistAccel( std::unique_ptr<phmsq_function>((*delegated).moved())
                       , basepeaks_per_cpeak
                       , peakscombiner
+                      , intern_x0caption, intern_sigmacaption, intern_Acaption
                       , accelcaptions                                         )
            );
   }

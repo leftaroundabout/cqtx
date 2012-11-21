@@ -1384,30 +1384,30 @@ bool isIEEE754nan(double var) {
   
 physquantity exp(const physquantity &expv){
   double dimless = expv.dbl();
-  physquantity result = exp(dimless) * real1;
+  physquantity result = std::exp(dimless) * real1;
   result.seterror(result * expv.error().dbl());
   return result;
 }
 physquantity ln(const physquantity &expv){
   double dimless = expv.dbl();
-  physquantity result = log(dimless)*real1;
+  physquantity result = std::log(dimless)*real1;
   result.seterror((expv.error().dbl()/dimless)*real1);
   return result;
 }
 physquantity sin(const physquantity &expv){
   double dimless = expv.dbl();
-  physquantity result = sin(dimless) * real1;
+  physquantity result = std::sin(dimless) * real1;
   result.seterror(abs(cos(dimless)) * expv.error().dbl() * real1);
   return result;
 }
 physquantity cos(const physquantity &expv){
   double dimless = expv.dbl();
-  physquantity result = cos(dimless) * real1;
+  physquantity result = std::cos(dimless) * real1;
   result.seterror(abs(sin(dimless)) * expv.error().dbl() * real1);
   return result;
 }
 physquantity tanh(const physquantity &argv){
-  double dimless = argv.dbl(), a=exp(dimless), b=(exp(-dimless)), s = a+b;
+  double dimless = argv.dbl(), a=std::exp(dimless), b=(std::exp(-dimless)), s = a+b;
   physquantity result = (a-b)/s * real1;
   if (isIEEE754nan(result.dbl())) return sgn(argv);
   result.seterror(abs(4*argv.error().dbl()/(s*s)) * real1);
@@ -1416,8 +1416,8 @@ physquantity tanh(const physquantity &argv){
 }
 
 
-double cosech(double x) { return 2 * sinh(x) / (cosh(2*x) - 1); }
-double cotanh(double x) { return sinh(2 * x) / (cosh(2*x) - 1); }
+double cosech(double x) { return 2 * std::sinh(x) / (std::cosh(2*x) - 1); }
+double cotanh(double x) { return std::sinh(2 * x) / (std::cosh(2*x) - 1); }
 physquantity cosech(const physquantity &x){
   double dimless = x.dbl();
   physquantity result = cosech(dimless) * real1;
