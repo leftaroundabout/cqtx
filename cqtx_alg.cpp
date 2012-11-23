@@ -758,7 +758,8 @@ template <typename containerT, typename keyfniT, typename keyfnTt>
 measureseq logscesSFT(typename std::vector<containerT> &srcorg,
                       keyfniT keytst, keyfniT keytnd,
                       keyfnTt keymet, float octvDens){
-  normalized_compactsupportfn<physquantity, physquantity> const &windowfn = Friedrichs_mollifier;
+  //const normalized_compactsupportfn<physquantity, physquantity>&
+  auto windowfn = Friedrichs_mollifier;
   
   unsigned int keyringsize=0;
   std::vector<measureindexpointer> newkeyring;
@@ -1272,7 +1273,7 @@ class derivative_of_mine: public compactsupportfn<skeyT, svalT> {
 #endif
 
   void do_correctional_with_kernel(double crctstepsz, kernelT &rfn) {
-    svalT allowreldiffrs[eventnodes.size()];
+    std::vector<svalT> allowreldiffrs(eventnodes.size());
     int i=0;
     for (hist_citer j=eventnodes.begin(); j!=eventnodes.end(); ++j,++i) {
       svalT nowdist = eval_with_kernel(j->first, rfn) - j->second.y

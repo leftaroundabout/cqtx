@@ -903,7 +903,7 @@ class physquantity {                           //Klasse f\"ur physikalische Gr\"
 
   template<class RHSMultiplier>
   auto operator*(const lhsMultipliable<RHSMultiplier> &mtpv) const
-      -> decltype(mtpv.polymorphic().lefthand_multiplied(physquantity())) {
+      -> decltype(mtpv.polymorphic().lefthand_multiplied(std::declval<physquantity>())) {
     return mtpv.polymorphic().lefthand_multiplied(*this);
   }
 
@@ -1463,7 +1463,7 @@ ostream &operator << (ostream &target, physquantity inputthis){
    }else{
     std::stringstream ubuild;
 
-    auto expshow = [&](phDimension::cgsSelect sl) {
+    auto expshow = [&](phDimension::cgsSelect sl) -> std::string {
             std::string rs_n = inputthis.myDim.fractionshow(sl);
 //             if(rs_n.find('/')!=std::string::npos || rs_n.find('-')!=std::string::npos)
 //               rs_n = "(" + rs_n + ")";
@@ -1488,7 +1488,7 @@ ostream &operator << (ostream &target, physquantity inputthis){
       targ << u8" \u00b1 " << inputthis.myError.valintu << ')';
     targ << " " << inputthis.tunit->uName; */
 
-  auto miniTeX = [&](const std::string& str){
+  auto miniTeX = [&](const std::string& str) -> std::string {
          std::stringstream TeXd;
          auto parse_err = [&](const std::string& spec){
                 cerr << "Error: in miniTeX-parsing physquantity printout \""<<str<<"\":\n"

@@ -296,8 +296,8 @@ using namespace stdPhysUnitsandConsts;
   
 };*/
 
-struct measure;
-struct measureseq;
+class measure;
+class measureseq;
 
 
 
@@ -311,7 +311,8 @@ struct measureseq;
   //     If used for larger sets of quantities and speed-relevant algorithms, direct
  //      O(n) by-name lookup becomes inefficient: in this case use captfinder objects
 //       for the lookups, which support index memoization.
-struct measure : std::vector<physquantity> {
+class measure : public std::vector<physquantity> {
+ public:
   measure(){}
   measure(size_t num) : std::vector<physquantity>(num) {}
   measure(size_t num, physquantity allelems) : std::vector<physquantity>(num, allelems) {}

@@ -493,9 +493,9 @@ namespace_cqtxnamespace_CLOSE
 namespace_cqtxnamespace_OPEN
 
 
-                                         TEMPLATIZED_COPYABLE_DERIVED_STRUCT(/*
+                                         TEMPLATIZED_COPYABLE_PDERIVED_CLASS(/*
 template < class*/NonevaledFn/*>  // NonevaledFn should be a phmsq_function*/,/*
-struct*/ptlevaled_fittable_phmsq_function, fittable_phmsqfn) {
+class*/ptlevaled_fittable_phmsq_function,/*: public*/fittable_phmsqfn) {
 
   using copyable_derived<fittable_phmsqfn,ptlevaled_fittable_phmsq_function>::fittable_phmsqfn::argdrfs;
   using copyable_derived<fittable_phmsqfn,ptlevaled_fittable_phmsq_function>::fittable_phmsqfn::argdrfs_of;
@@ -645,8 +645,8 @@ auto redirect_name(std::initializer_list<std::initializer_list<std::string>> ini
 
 
 
-typedef phmsq_function_base<bool> boolean_phmsq_function;
-class nonholonomic_optimizationconstraint: public boolean_phmsq_function {
+typedef phmsq_function_base<bool> phmsq_predicate;
+class nonholonomic_optimizationconstraint: public phmsq_predicate {
 /*
  protected:
   struct cstrtInfoPrimitive {
@@ -1232,23 +1232,50 @@ if(0)cout<< "Calc multiplicity.\nAverage dist: " << avgd
 };
 
 
-struct fit_of_phqfn_to_msq_object {
-  measure fitresult;
-  const measure &result() const {return fitresult;}
+                                                      COPYABLE_PDERIVED_CLASS(/*
+class*/fittedFunction,/*: public*/phmsq_function) {
+  std::unique_ptr<fittable_phmsqfn> fittable_fn;
+  measure fittedparams;
+  fittedFunction(std::unique_ptr<fittable_phmsqfn> fittable_fn, measure fittedparams)
+    : fittable_fn(std::move(fittable_fn)), fittedparams(std::move(fittedparams)) {}
+ public:
+  auto result() -> const measure& {
+    return fittedparams;
+  }
+  virtual physquantity operator() (const measure& thisparams) const override {
+    measure allparams = fittedparams.combined_with(thisparams);
+    return (*fittable_fn)(allparams);
+  }
+  
+//   fittedFunction( const fittable_phmsqfn& f
+//                 , const measureseq& fitto
+//                 , msqDereferencer nreturndrf
+//                 , const nonholonomic_optimizationconstraint& nc=trivial_constraint
+//                 , evolution_minimizer::solutioncertaintycriteria
+//                      sccrit=evolution_minimizer::solutioncertaintycriteria::doublevalue() )
+//     : fittable_fn(f.clone())
+//     , fittedparams(fit_phq_to_measureseq(f, nftgt, nreturndrf, nc, sccrit)
+//   {}
+  fittedFunction(const fittedFunction& cpy)
+    : fittable_fn(cpy.fittable_fn->clone())
+    , fittedparams(cpy.fittedparams)
+  {}
+  friend fittedFunction fit_phq_to_measureseq(
+     const fittable_phmsqfn&, const measureseq&
+     , msqDereferencer, const nonholonomic_optimizationconstraint&
+     , evolution_minimizer::solutioncertaintycriteria);
 };
 
-fit_of_phqfn_to_msq_object fit_phq_to_measureseq(
+fittedFunction fit_phq_to_measureseq(
           const fittable_phmsqfn& nf
         , const measureseq& nftgt
         , msqDereferencer nreturndrf
         , const nonholonomic_optimizationconstraint& nc=trivial_constraint
         , evolution_minimizer::solutioncertaintycriteria
                  sccrit=evolution_minimizer::solutioncertaintycriteria::doublevalue()  ) {
-  fit_of_phqfn_to_msq_object ret;
   fitdist_fntomeasures d(nftgt, nf, std::move(nreturndrf));
   evolution_minimizer mnz(d, nc, sccrit);
-  ret.fitresult = mnz.result();
-  return ret;
+  return fittedFunction(std::unique_ptr<fittable_phmsqfn>(nf.clone()), mnz.result());
 }
 
 typedef int spectfit_linkingt;
@@ -1625,7 +1652,7 @@ class spectrumfitter {
   bool spectrumfit_is_ok(const measureseq &fnplot, const measureseq &fittedpeaks) {
     captfinder wfind(spectrpeakwidth_name);
     unsigned npeaks = fittedpeaks.size();
-    fittable_multigaussianfn fgfn(npeaks);
+    MultiPeakFn fgfn(npeaks);
 
     LaTeXindex_itrange indexrng = LaTeXindex("i").from(0).unto(npeaks);
     fgfn.rename_var("x, x_i, A_i", *xfind + ", " + *xfind+"_i, " + *Afind+"_i", indexrng);
@@ -1723,8 +1750,12 @@ measureseq fit_spectrum( const measureseq fnplot
 
 
 
+
+
+
+
 #if 0
-class montecarlofit {      //use deprecated at the moment
+class montecarlofit { 
   measureseq ftgt;
   const fittable_phmsqfn &f;
   measure fitres;

@@ -180,7 +180,7 @@ class nonlinSqD_handle{
   }
   
   template<typename FnSpecify>
-  friend class nonlinSqD_staticDispatch;
+  friend struct nonlinSqD_staticDispatch;
 };
 
 

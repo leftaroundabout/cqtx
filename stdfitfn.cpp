@@ -330,6 +330,7 @@ class*/combinedPeaks_fittable_spectrum,/*: public*/fittable_phmsqfn) {
   
   std::string intern_x0caption, intern_sigmacaption, intern_Acaption;
   
+ protected:
   _4_FITVARIABLES(x, x0, sigma, A)
   NMULTIFITVARIABLES(3)    //x₀, σ and A together describe one peak.
 
@@ -344,18 +345,21 @@ class*/combinedPeaks_fittable_spectrum,/*: public*/fittable_phmsqfn) {
     NMULTIFITVARIABLES(3)
     std::shared_ptr<phmsq_function> basespectr_acceld;
     unsigned npeaks, basepeaks_per_cpeak;
-    std::string intern_x0caption, intern_sigmacaption, intern_Acaption;
     PeaksCombiner peakscombiner;
+    std::string intern_x0caption, intern_sigmacaption, intern_Acaption;
     
     auto operator() (const measure& thisparams)const -> physquantity {
       ps = &thisparams;
       measure pass_params;
+//       cout << "Accelerated eval of combinedPeaks_fittable_spectrum requested with\n"
+//            << thisparams << std::endl;
       for(unsigned i=0; i<npeaks; ++i){
         measure thispeak;
         thispeak.let(intern_x0caption   ) = x0(i);
         thispeak.let(intern_sigmacaption) = sigma(i);
         thispeak.let(intern_Acaption    ) = A(i);
         unsigned j = i * basepeaks_per_cpeak;
+//         cout << "  Peak for combination:\n" << thispeak << std::endl;
         for(auto& thissubpeak: peakscombiner(thispeak)) {
           pass_params.let(   "x"    + LaTeX_subscript(j)) = thissubpeak[intern_x0caption   ];
           pass_params.let("\\sigma" + LaTeX_subscript(j)) = thissubpeak[intern_sigmacaption];
@@ -363,6 +367,8 @@ class*/combinedPeaks_fittable_spectrum,/*: public*/fittable_phmsqfn) {
           ++j;
         }
       }
+//       cout << "This is represented by calling the underlying spectrum with\n"
+//            << thisparams << std::endl;
       return (*basespectr_acceld)(pass_params);
     }
     
@@ -375,7 +381,10 @@ class*/combinedPeaks_fittable_spectrum,/*: public*/fittable_phmsqfn) {
                    , const std::vector<std::array<std::string, 3>>& param_captions )
       : basespectr_acceld(std::move(basespectr_acceld))
       , npeaks(param_captions.size()), basepeaks_per_cpeak(basepeaks_per_cpeak)
-      , peakscombiner(std::move(peakscombiner))                                   {
+      , peakscombiner(std::move(peakscombiner))
+      , intern_x0caption(intern_x0caption)
+      , intern_sigmacaption(intern_sigmacaption)
+      , intern_Acaption(intern_Acaption)                 {
       allocate_fitvarsbuf(npeaks);
       for (unsigned i = 0; i<npeaks; ++i) {
         cptof_x0(   i, param_captions[i][0] );
@@ -418,11 +427,11 @@ class*/combinedPeaks_fittable_spectrum,/*: public*/fittable_phmsqfn) {
     , intern_x0caption(cpy.intern_x0caption), intern_sigmacaption(cpy.intern_sigmacaption), intern_Acaption(cpy.intern_Acaption)
     , peakscombiner(cpy.peakscombiner) {
     allocate_fitvarsbuf(npeaks);
-    cptof_x("x");
+    cptof_x(*cpy.cptof_x());
     for (unsigned i = 0; i<npeaks; ++i) {
-      cptof_x0(   i,    "x"    + LaTeX_subscript(i));
-      cptof_sigma(i, "\\sigma" + LaTeX_subscript(i));
-      cptof_A(    i,    "A"    + LaTeX_subscript(i));
+      cptof_x0(   i, *cpy.cptof_x0(i)    );
+      cptof_sigma(i, *cpy.cptof_sigma(i) );
+      cptof_A(    i, *cpy.cptof_A(i)     );
     }
   }
   
@@ -443,6 +452,7 @@ class*/combinedPeaks_fittable_spectrum,/*: public*/fittable_phmsqfn) {
         ++j;
       }
     }
+    // cout << "pass_params:\n" << pass_params << std::endl;
     return (*base_spectr)(pass_params);
   }
   
@@ -479,21 +489,42 @@ class*/combinedPeaks_fittable_spectrum,/*: public*/fittable_phmsqfn) {
   }
   
   measure example_parameterset(const measure &constraints, const physquantity &desiredret) const{
+//     std::cout << "Request example parameters for combinedPeaks_fittable_spectrum, with constraints:\n"
+//               << constraints << std::endl;
     measure pass_params; ps = &constraints;
     if(ps->has(*cptof_x()))
       pass_params.let("x") = x();
     
     for(unsigned i=0; i<npeaks; ++i) {
-      if(ps->has(*cptof_x(i)))
-        pass_params.let(   "x"    + LaTeX_subscript(i)) = x(i);
-      if(ps->has(*cptof_sigma(i)))
-        pass_params.let("\\sigma" + LaTeX_subscript(i)) = sigma(i);
-      if(ps->has(*cptof_A(i)))
+//       std::cout << "      Position " << (*cptof_x0(i));
+      if(ps->has(*cptof_x0(i))) {
+//         std::cout << " found " << std::endl;
+        pass_params.let(   "x"    + LaTeX_subscript(i)) = x0(i);
+       }else{
+//         std::cout << " not found" << std::endl;
+      }
+//       std::cout << "      Peak-width " << (*cptof_sigma(i));
+      if(ps->has(*cptof_sigma(i))) {
+//         std::cout << " found " << std::endl;
+//         pass_params.let("\\sigma" + LaTeX_subscript(i)) = sigma(i);
+       }else{
+//         std::cout << " not found" << std::endl;
+      }
+//       std::cout << "      Magnitude " << (*cptof_A(i));
+      if(ps->has(*cptof_A(i))) {
+//         std::cout << " found " << std::endl;
         pass_params.let(   "A"    + LaTeX_subscript(i)) = A(i);
+       }else{
+//         std::cout << " not found" << std::endl;
+      }
     }
+//     std::cout << "Params to pass to dummy-spectrum:\n"
+//               << pass_params << std::endl;
     
     measure example = exampleparams_dummy.example_parameterset(pass_params, desiredret)
           , pass_example;
+//     std::cout << "Dummy-spectrum returned example:\n"
+//               << example << std::endl;
     ps = &example;
 
     if(ps->has("x"))
@@ -501,12 +532,16 @@ class*/combinedPeaks_fittable_spectrum,/*: public*/fittable_phmsqfn) {
     
     for(unsigned i=0; i<npeaks; ++i) {
       if(ps->has(   "x"    + LaTeX_subscript(i)))
-        pass_example.let(*cptof_x(i))     = example[   "x"    + LaTeX_subscript(i)];
+        pass_example.let(*cptof_x0(i))     = example[   "x"    + LaTeX_subscript(i)];
       if(ps->has("\\sigma" + LaTeX_subscript(i))  )
         pass_example.let(*cptof_sigma(i)) = example["\\sigma" + LaTeX_subscript(i)];
       if(ps->has(   "A"    + LaTeX_subscript(i)))
         pass_example.let(*cptof_A(i))     = example[   "A"    + LaTeX_subscript(i)];
     }
+    
+//     std::cout << "Resulting example:\n"
+//               << pass_example << std::endl;
+    
     return pass_example;
   }
 };
