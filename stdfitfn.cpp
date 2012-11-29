@@ -138,9 +138,9 @@ class*/fittable_multigaussianfn,/*: public*/fittable_phmsqfn) {
     ps = &thisparams;
     physquantity result=0;
     for (unsigned j = 0; j<npeaks; ++j) {
-      if (sigma(j) != 0)
+      if (sigma(j) != 0) {
         result += A(j) * exp( ( ( x() - x0(j) ) / sigma(j) ).squared() * (-1/2.) );
-       else {
+       }else{
         result += (x() == x0(j))? A(j) : 0;
       }
     }

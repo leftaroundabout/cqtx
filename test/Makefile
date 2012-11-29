@@ -3,7 +3,7 @@ all: bin/sqd_accel bin/qdafilecleanup bin/algo_phqmfn_dblgauss_0
 CXXC = g++-4.6
 CXXCFlags= $(miscflags) $(optimizations) $(warnings) $(CXXincludes)
 CXXincludes = $(CQTXincludes) $(CUDAincludes)
-optimizations= -march=native # -DCUDA_ACCELERATION -O2 -ffast-math
+optimizations= -march=native -DCUDA_ACCELERATE_ALL # -O2 -ffast-math
 warnings= -Wall
 miscflags= --std=c++0x -g
 

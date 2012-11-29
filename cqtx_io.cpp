@@ -678,7 +678,7 @@ namespace QTeXgrcolors {
 
 class QTeXgrofstream : protected ofstream {  //Inheritance is handled improperly here.
                                             // Yet to fix!
-  union {double dbl; uint32_t intg; char chr;};
+  union {double dbl; uint16_t intg; char chr;};
  protected:
 
   QTeXgrofstream &open(const string &nfname){
@@ -1074,6 +1074,7 @@ phGraphScreen rasterize(const compactsupportfn<arg_T, ret_T> &, int raster);
 
 
 void qdafilecleanup(const std::string& fname) {
+  std::string dirname = gstr_dirname(fname);
   std::ifstream qdafile(fname.c_str(), std::ios::binary);
   
   if(!!qdafile) {
@@ -1083,9 +1084,10 @@ void qdafilecleanup(const std::string& fname) {
          };
     auto read_string = [&]() -> std::string {
            auto strlength = read_uint16();
+//           std::cout << "embedded file, name has length " << strlength << std::endl;
            std::vector<char> resbuf(strlength+1, '\0');
            qdafile.read(resbuf.data(), strlength);
-           return resbuf.data();
+           return std::string(resbuf.data());
          };
     auto read_double = [&]() -> double {
            double res; qdafile.read((char*) &res, sizeof(double)); return res;
@@ -1098,8 +1100,8 @@ void qdafilecleanup(const std::string& fname) {
        
        case 'g': {
           auto embeddedfile = read_string();
-//           std::cout << "found embedded graph file \"" << embeddedfile << "\". Delete.\n";
-          remove(embeddedfile.c_str());
+//            std::cout << "found embedded graph file \"" << (dirname + embeddedfile) << "\". Delete.\n";
+          remove((dirname + embeddedfile).c_str());
           /*auto clrid =*/read_uint16();
           break;
         }
@@ -1156,12 +1158,14 @@ class QTeXdiagmaster : QTeXgrofstream {
   }
 
  public:
-  QTeXdiagmaster(const string &nfname) :
-    myfilename(nfname),
-    mydirname(gstr_dirname(myfilename)),
-    Iamnew(true),
-    needbordersets(2),
-    nextcolorcandidate(QTeXgrcolors::defaultsequence[0]) {
+  QTeXdiagmaster(const string &nfname)
+    : myfilename(nfname)
+    , mydirname(gstr_dirname(myfilename))
+    , Iamnew(true)
+    , needbordersets(2)
+    , nextcolorcandidate(QTeXgrcolors::defaultsequence[0]) {
+//     std::cout << "New QTeXdiagmaster in file '" << nfname
+//               << "' (directory '" << mydirname << "')" << std::endl;
     cleanupandopenfile(nfname);
   }
   
@@ -1228,6 +1232,8 @@ class QTeXdiagmaster : QTeXgrofstream {
   }
   void make_safe_qcvfilename(std::string &nfname) const{
     if(nfname=="") nfname = safecmpnfilename(mydirname, ".qcv");
+    if(nfname.substr(0,2) == "./")
+      nfname = nfname.substr(2);
   }
  public:
 

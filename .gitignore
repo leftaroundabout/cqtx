@@ -19,6 +19,7 @@
 # Binaries
 bin/*
 test/bin/*
+*.out
 
 # primitive graphic output
 *.BMP
@@ -27,3 +28,5 @@ test/bin/*
 
 # Swap junk files introduced by certain file systems
 *.swp
+
+*.fuse_hidden*
