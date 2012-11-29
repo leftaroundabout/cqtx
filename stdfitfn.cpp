@@ -152,26 +152,36 @@ class*/fittable_multigaussianfn,/*: public*/fittable_phmsqfn) {
             -> p_maybe<phmsq_function> {
              
     assert(fixedparams.size() > 0);
-    ps = &fixedparams.front();
 
-    std::vector<const phUnit*> agdfunits(3*npeaks);
+    std::vector<const phUnit*> agdfunits(3*npeaks, nullptr);
+    const phUnit*& xunit     = agdfunits[0];
+    const phUnit*& sigmaunit = agdfunits[1];
+    const phUnit*& Aunit     = agdfunits[2];
+    
     const phUnit* retunit;
     
     std::vector<captfinder> varfinds(3*npeaks);
 
   // we go for multigaussian_vars_x0_sigma_A.
   // x0, x and sigma have the same physical dimension.
-    if(!ps->has(*cptof_x())) return nothing;
-    agdfunits[0] = x().tryfindUnit().preferredUnit();
-    assert(agdfunits[0] != NULL);
-    
-    agdfunits[1] = agdfunits[0];
+    for(auto& rps: fixedparams) {
+      ps = &rps;
+      if(!ps->has(*cptof_x())) return nothing;
+      if(!xunit && !x().is_identical_zero())
+        xunit = x().tryfindUnit().preferredUnit();
+      
+      sigmaunit = xunit;
 
-    if(auto fst_r = retcomp_drf.tryfind(*ps)) {
-      agdfunits[2] = fst_r->tryfindUnit().preferredUnit();
-      assert(agdfunits[2] != NULL);
-      retunit = agdfunits[2];
-     }else return nothing;
+      if(auto fst_r = retcomp_drf.tryfind(*ps)) {
+        if(!Aunit && !fst_r->is_identical_zero()) {
+          Aunit = fst_r->tryfindUnit().preferredUnit();
+          retunit = Aunit;
+        }
+       }else return nothing;
+    }
+    if (!xunit || !Aunit) return nothing;
+    
+    ps = &fixedparams.front();
 
     for(unsigned j=3; j<3*npeaks; ++j) agdfunits[j] = agdfunits[j%3];
 

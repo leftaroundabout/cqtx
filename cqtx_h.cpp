@@ -653,6 +653,7 @@ class measureseq : std::vector<measure>{
   }
 
   using std::vector<measure>::size;
+  using std::vector<measure>::clear;
 
   auto front() -> measure& { return std::vector<measure>::front(); }
   auto front()const -> const measure& { return std::vector<measure>::front(); }

@@ -1,4 +1,4 @@
-all: bin/sqd_accel bin/qdafilecleanup 
+all: bin/sqd_accel bin/qdafilecleanup bin/algo_phqmfn_dblgauss_0
 
 CXXC = g++-4.6
 CXXCFlags= $(miscflags) $(optimizations) $(warnings) $(CXXincludes)
@@ -27,6 +27,11 @@ bin/sqd_accel : sqd_accel.cpp $(CQTXpath)/*.?pp $(CQTXpath)/*cu
 	$(CXXC) -c $< $(CXXCFlags)
 	$(CC) -o $@ sqd_accel.o $(CQTXlibs) $(CUDAlibs)
 	@rm sqd_accel.o
+
+bin/algo_phqmfn_dblgauss_0 : algo_phqmfn_dblgauss_0.cpp $(CQTXpath)/*.?pp $(CQTXpath)/*cu
+	$(CXXC) -c $< $(CXXCFlags)
+	$(CC) -o $@ algo_phqmfn_dblgauss_0.o $(CQTXlibs) $(CUDAlibs)
+	@rm algo_phqmfn_dblgauss_0.o
 
 bin/qdafilecleanup : qdafilecleanup.cpp $(CQTXpath)/*.?pp
 	$(CXXC) -c $< $(CXXCFlags)

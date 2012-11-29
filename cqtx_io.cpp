@@ -1028,6 +1028,7 @@ std::string randomcmpnfilename(std::string ppath = "", const std::string &filenm
 
 std::string gstr_dirname(std::string path) {
   if (path.size()==0) return path;
+  if (path.find('/')==std::string::npos) return "./";
   if (path.rfind('/')==path.size()-1) path.erase(path.size()-1);
   return path.substr(0, path.find_last_of('/'));
 }
