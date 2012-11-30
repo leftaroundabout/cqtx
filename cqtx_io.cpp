@@ -1084,7 +1084,6 @@ void qdafilecleanup(const std::string& fname) {
          };
     auto read_string = [&]() -> std::string {
            auto strlength = read_uint16();
-//           std::cout << "embedded file, name has length " << strlength << std::endl;
            std::vector<char> resbuf(strlength+1, '\0');
            qdafile.read(resbuf.data(), strlength);
            return std::string(resbuf.data());
@@ -1099,9 +1098,15 @@ void qdafilecleanup(const std::string& fname) {
       switch(objtypechar) {
        
        case 'g': {
-          auto embeddedfile = read_string();
-//            std::cout << "found embedded graph file \"" << (dirname + embeddedfile) << "\". Delete.\n";
-          remove((dirname + embeddedfile).c_str());
+          auto embeddedfile = dirname+"/"+read_string();
+          {
+            std::ifstream embdfile(embeddedfile.c_str(), std::ios::binary);
+            if(!embdfile)
+              std::cerr << "Warning: trying to clean up file '" << fname
+                        << "' which references '" << embeddedfile << "', which cannot be found. Skip.\n";
+          }
+//             std::cout << "found embedded graph file \"" << (dirname+"/" + embeddedfile) << "\". Delete.\n";
+          remove(embeddedfile.c_str());
           /*auto clrid =*/read_uint16();
           break;
         }
