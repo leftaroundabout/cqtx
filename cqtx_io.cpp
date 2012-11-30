@@ -676,6 +676,14 @@ namespace QTeXgrcolors {
 }
 
 
+
+
+#include "terminal-io.hpp"
+
+
+
+
+
 class QTeXgrofstream : protected ofstream {  //Inheritance is handled improperly here.
                                             // Yet to fix!
   union {double dbl; uint16_t intg; char chr;};

@@ -1686,7 +1686,7 @@ class spectrumfitter {
       for (auto r : fit_spectrum_delegations(fnplot, nestdepth+1)) //  fails may be flukes, if either
         return just(r);                                           //   succeeds return its result.
 #ifdef SPECTRUMFITTER_PROCESSMESSAGES
-    cout << indent(nestdepth) << "since fit delegation failed, fit whole range "
+    cout << indent(nestdepth) << "since delegation failed, fit whole range "
                  << fnplot.range_of(xfind) << "...\n";
 #endif
     ptlfit_outcome result(measureseq(0));
@@ -1694,7 +1694,7 @@ class spectrumfitter {
         ; npeaks*min_spectrumfit_mpoints_per_peak+minimum_spectrumfit_mpoints<=fnplot.size()
         ; ++npeaks) {
 #ifdef SPECTRUMFITTER_PROCESSMESSAGES
-      cout << indent(nestdepth)<<"            "<<npeaks<<"peaks...\n";
+      cout << indent(nestdepth)<<"            "<<npeaks<<" peak"<<(npeaks-1?"s":"")<<"...\n";
 #endif
       if (npeaks>0)
         *result = ffit_spectrum<MultiPeakFn>
@@ -1702,13 +1702,25 @@ class spectrumfitter {
                              .pack_subscripted();
       if(spectrumfit_is_ok(fnplot, *result)) {
 #ifdef SPECTRUMFITTER_PROCESSMESSAGES
-        cout << indent(nestdepth) << "success, result is: (...)\n";// << *result;
+        cout << indent(nestdepth) << colorize_str("success", QTeXgrcolors::i_green)
+                   << ", result is: (...)\n";// << *result;
 #endif
+        return result;
+      }
+      const unsigned max_useful_npeaks = 4;
+      if(npeaks >= max_useful_npeaks) {
+        std::ostringstream warnmsg;
+        warnmsg << "range-fit is not convincing, but proceed anyway since fitting more than "
+                << max_useful_npeaks
+                << " peaks is unlikely to succeed";
+        cerr << indent(nestdepth)
+            << colorize_str( warnmsg.str(), QTeXgrcolors::i_brown ) << std::endl;
         return result;
       }
     }
 #ifdef SPECTRUMFITTER_PROCESSMESSAGES
-    cout << indent(nestdepth) << "process-fit in range failed\n";
+    cout << indent(nestdepth) << "process-fit in range "
+                << colorize_str("failed", QTeXgrcolors::i_red) << std::endl;
 #endif
     return nothing;
   }

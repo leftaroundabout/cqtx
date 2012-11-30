@@ -20,7 +20,7 @@
 using namespace cqtx;
 
 const physquantity lambda_alpha1 = 1.5406 * angstroms
-                 , lambda_alpha2 = 1.5444 * angstroms
+                 , lambda_alpha2 = 2.6444 * angstroms
                  , Kalphai_ratio = 2 * real1;
 
 auto xraydoublepeak_relation(const measure& m) -> std::vector<measure> {
@@ -37,7 +37,7 @@ auto xraydoublepeak_relation(const measure& m) -> std::vector<measure> {
 struct doublepeak_xrayspectrum : combinedPeaks_fittable_spectrum {
   doublepeak_xrayspectrum(unsigned npeaks)
     : combinedPeaks_fittable_spectrum (
-         fittable_multigaussianfn(npeaks)
+         fittable_multigaussianfn(npeaks*2)
        , 2
        , xraydoublepeak_relation
        , "s_0"
@@ -70,8 +70,8 @@ int main(){
   doublepeak_xrayspectrum mygauss(1);
 //  fittable_gaussianfn mygauss;
   mygauss.rename_var("x_0",      "t_0")
-         .rename_var("A",       "\\rho_0")
-         .rename_var("\\sigma", "\\sigma")
+         .rename_var("A_0",       "\\rho_0")
+         .rename_var("\\sigma_0", "\\sigma")
          .rename_var("x",         "t");
          
   measure p;
@@ -81,7 +81,7 @@ int main(){
 
   std::normal_distribution<> cdice_distrib(0, 1.);
   std::normal_distribution<> noise_distrib(0, 1./23);
-  std::mt19937 random_engine(4);
+  std::mt19937 random_engine(433487);
   
   auto cdice = std::bind(cdice_distrib, random_engine);
   auto noise = std::bind(noise_distrib, random_engine);
@@ -117,7 +117,7 @@ int main(){
     for (physquantity t = p["t_0"]-3*p["\\sigma"]; t<p["t_0"]+3*p["\\sigma"]; t+=.01*p["\\sigma"]){
       measure ftpt = fttp;
       ftpt.let("t") = t;
-      ftpt.let("\\rho") = mygauss(ftpt); // fitted(t.label("t")); // 
+      ftpt.let("\\rho") = fitted(t.label("t")); // mygauss(ftpt); // 
       frr.push_back(ftpt);
     }    
 //     measureseq frr2;

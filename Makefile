@@ -1,4 +1,4 @@
-all: bin/phqdumpview lib/squdistaccel.o lib/squdistaccel-fns.o
+all: bin/phqdumpview bin/qdafilecleanup lib/squdistaccel.o lib/squdistaccel-fns.o
 
 install: all
 	cp bin/phqdumpview /usr/local/bin
@@ -7,7 +7,7 @@ CPPC = g++-4.7
 CPPCFlags= $(miscflags) $(optimizations) $(warnings) $(CPPincludes)
 CPPincludes = -I $(cqtxheader)
 cqtxheader = /media/misc/progwrit/cpp/cqtx
-optimizations= -march=native -DCUDA_ACCELERATION # -O2 -ffast-math
+optimizations= -march=native # -DCUDA_ACCELERATION -O2 -ffast-math
 warnings= -Wall
 miscflags= --std=c++11 -g
 
@@ -25,7 +25,10 @@ CC = gcc $(profileflag)
 
 
 bin/phqdumpview: apps/phqdumpview.cpp *.cpp
-	$(CPPC) -o bin/phqdumpview apps/phqdumpview.cpp $(CPPCFlags)
+	$(CPPC) -o $@ $< $(CPPCFlags)
+
+bin/qdafilecleanup: apps/qdafilecleanup.cpp *.cpp
+	$(CPPC) -o $@ $< $(CPPCFlags)
 
 lib/squdistaccel.o : squdistaccel.cu squdistaccel.hcu
 	$(CUDAC) -c $< $(CUDACFlags)
