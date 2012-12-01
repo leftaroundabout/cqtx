@@ -371,14 +371,15 @@ class physquantity {                           //Klasse f\"ur physikalische Gr\"
   captT caption;
 //  string *caption;
 
-  physquantity(const physquantity &cpyfrom):                   //Standard-Kopie
-  	myDim(cpyfrom.myDim),
-    tunit(cpyfrom.tunit),
-    caption(cpyfrom.caption)
-#if 0
-,   valintu(cpyfrom.valintu),
-    valincgs(cpyfrom.valincgs),
-    myError(cpyfrom.myError.valincgs, cpyfrom.myError.valintu)
+  physquantity(const physquantity &cpyfrom)                   //Standard-Kopie
+    : myDim(cpyfrom.myDim)
+    , tunit(cpyfrom.tunit)
+//     , caption(cpyfrom.caption)
+#if 1
+    , valintu(cpyfrom.valintu)
+    , valincgs(cpyfrom.valincgs)
+    , myError(cpyfrom.myError.valincgs, cpyfrom.myError.valintu)
+    , caption(cpyfrom.caption)
   {
  #else
   {
