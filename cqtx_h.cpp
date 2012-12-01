@@ -536,7 +536,8 @@ class measure : public std::vector<physquantity> {
     return result;
   }
   measure &by_i_add(const measure &other) {
-    for(unsigned i=0; i<size(); ++i)
+//     for(unsigned i=0; i<size(); ++i)
+    for(unsigned i=std::min(size(), other.size()); i-->0;)
       operator[](i) += other[i];
     return *this;
   }
@@ -546,7 +547,7 @@ class measure : public std::vector<physquantity> {
     return result;
   }
   measure &by_i_substract(const measure &other) {
-    for(unsigned i=0; i<size(); ++i)
+    for(unsigned i=std::min(size(), other.size()); i-->0;)
       operator[](i) -= other[i];
     return *this;
   }
@@ -562,7 +563,7 @@ class measure : public std::vector<physquantity> {
     return result;
   }
   measure &by_i_leterrors(const measure &other) {
-    for(unsigned i=0; i<size(); ++i)
+    for(unsigned i=std::min(size(), other.size()); i-->0;)
       operator[](i).error(other[i]);
     return *this;
   }
@@ -573,7 +574,8 @@ class measure : public std::vector<physquantity> {
   }
   
   measure &by_i_statistically_approach(const measure &other, double significance) {
-    for(unsigned i=0; i<size(); ++i)
+//     for(unsigned i=0; i<size(); ++i)
+    for(unsigned i=std::min(size(), other.size()); i-->0;)
       operator[](i).statistically_approach(other[i], significance);
     return *this;
   }
@@ -799,25 +801,26 @@ class measureseq : std::vector<measure>{
  private: static const unsigned representativefindcounts=64;public:
   template<class derefT>
   physquantity randomrepresentative(const derefT &drf) const{
-    physquantity roughmn=0;
+    physquantity roughmean=0;
     unsigned i;
-    for(i=0; ( i<representativefindcounts && i<size() ) || ( roughmn==0 && i<size()*4 ); ++i){
-      roughmn+=drf(randommeasure());
+    for(i=0; ( i<representativefindcounts && i<size() ) || ( roughmean==0 && i<size()*4 ); ++i){
+      roughmean+=drf(randommeasure());
     }
-    roughmn/=std::min(size_t(representativefindcounts), size());
-  //  cout << "Rough mean: " << roughmn << endl;
+    roughmean/=std::min(size_t(representativefindcounts), size());
+  //  cout << "Rough mean: " << roughmean << endl;
     int j, bj=(float(rand())*size())/RAND_MAX;
-    physquantity lsqd=(drf(operator[](bj)) - roughmn).squared(), mndistsq=0;
+    physquantity lsqd=(drf(operator[](bj)) - roughmean).squared(), mndistsq=0;
+    
     for(i=0; (i<representativefindcounts && i<size()) || (i<2*size() && drf(operator[](bj))==0); ++i){
       j = (float(rand())*size())/RAND_MAX;
-      physquantity tsqd = (drf(operator[](j)) - roughmn).squared();
-      mndistsq += tsqd;
-      if ( ( drf(operator[](j))!=0 && tsqd < lsqd ) || drf(operator[](bj))!=0) {
-        bj=j; lsqd = tsqd;
+      physquantity tsquared = (drf(operator[](j)) - roughmean).squared();
+      mndistsq += tsquared;
+      if ( ( drf(operator[](j))!=0 && tsquared < lsqd ) || drf(operator[](bj))!=0) {
+        bj=j; lsqd = tsquared;
       }
     }
     mndistsq /= i;
-    return roughmn/*drf(operator[](bj))*/.werror(sqrt(mndistsq));
+    return roughmean/*drf(operator[](bj))*/.werror(sqrt(mndistsq));
   }
 
   measure randomrepresentatives() const;  

@@ -1638,12 +1638,12 @@ class spectrumfitter {
 #endif
     if (spectrumfit_is_ok(fnplot, *result)) {
 #ifdef SPECTRUMFITTER_PROCESSMESSAGES
-    cout << indent(nestdepth) << "matching of delegations successful.\n";
+    cout << indent(nestdepth) << "matching of delegations " << colorize_str("successful", QTeXgrcolors::i_green) << ".\n";
 #endif
       return result;
      }else{
 #ifdef SPECTRUMFITTER_PROCESSMESSAGES
-    cout << indent(nestdepth) << "matching of delegations resulted in unsuitable fit function.\n";
+    cout << indent(nestdepth) << "matching of delegations " << colorize_str("failed", QTeXgrcolors::i_red) << " / resulted in unsuitable function.\n";
 #endif
       return nothing;
     }
@@ -1673,7 +1673,7 @@ class spectrumfitter {
       noises   += noisefind(m).squared();
     }
 
-    return fitdists < noises;
+    return fitdists < noises * 2;
     
   }
 
@@ -1709,18 +1709,22 @@ class spectrumfitter {
       }
       const unsigned max_useful_npeaks = 4;
       if(npeaks >= max_useful_npeaks) {
-        std::ostringstream warnmsg;
-        warnmsg << "range-fit is not convincing, but proceed anyway since fitting more than "
-                << max_useful_npeaks
-                << " peaks is unlikely to succeed";
         cerr << indent(nestdepth)
-            << colorize_str( warnmsg.str(), QTeXgrcolors::i_brown ) << std::endl;
+            << colorize_str( "range-fit is not convincing, but proceed anyway"
+                           , QTeXgrcolors::i_brown )
+            << std::endl << indent(nestdepth+2)
+            <<  colorize_str(                                       [=](){std::ostringstream r;r
+                << "(since fitting more than "
+                << max_useful_npeaks
+                << " peaks is unlikely to succeed)";                 return r.str();}()
+                            , QTeXgrcolors::brown)
+            << std::endl;
         return result;
       }
     }
 #ifdef SPECTRUMFITTER_PROCESSMESSAGES
     cout << indent(nestdepth) << "process-fit in range "
-                << colorize_str("failed", QTeXgrcolors::i_red) << std::endl;
+                << colorize_str("failed", QTeXgrcolors::red) << std::endl;
 #endif
     return nothing;
   }
