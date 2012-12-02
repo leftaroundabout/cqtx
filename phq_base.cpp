@@ -1433,31 +1433,12 @@ physquantity conj(const physquantity &x){ return x; } // physquantities are real
 /*string dbltostr(const double &src, const double &roundcmp){
   return (tostr)
 }*/
+auto miniTeX_superscript(char) -> std::string;
+auto miniTeX(const std::string&) -> std::string;
 
 ostream &operator << (ostream &target, physquantity inputthis){
   std::stringstream targ;
   inputthis.tryfindUnit();
-
-
-  auto superscript = [](char c) -> std::string {
-         switch (c) {
-          case '0': return u8"\u2070";
-          case '1': return u8"\u00b9";
-          case '2': return u8"\u00b2";
-          case '3': return u8"\u00b3";
-          case '4': return u8"\u2074";
-          case '5': return u8"\u2075";
-          case '6': return u8"\u2076";
-          case '7': return u8"\u2077";
-          case '8': return u8"\u2078";
-          case '9': return u8"\u2079";
-          case '+': return u8"\u207a";
-          case '-': return u8"\u207b";
-          case '/': return u8"\u141F"; //actually CANADIAN SYLLABICS FINAL ACUTE,
-                                      // for the lack of a proper superscript solidus
-          default: return std::string(1,c);
-         }
-       };
 
   if (inputthis.tunit!=NULL){
     targ << inputthis.LaTeXval(false, true, true, true, *inputthis.tunit);
@@ -1469,7 +1450,7 @@ ostream &operator << (ostream &target, physquantity inputthis){
 //             if(rs_n.find('/')!=std::string::npos || rs_n.find('-')!=std::string::npos)
 //               rs_n = "(" + rs_n + ")";
             std::string rs;
-            for(auto& c: rs_n) rs += superscript(c);
+            for(auto& c: rs_n) rs += miniTeX_superscript(c);
             return rs;
          };
     if (inputthis.myDim != 0){              // cmⁱ⋅gʲ⋅sᵏ
@@ -1489,53 +1470,6 @@ ostream &operator << (ostream &target, physquantity inputthis){
       targ << u8" \u00b1 " << inputthis.myError.valintu << ')';
     targ << " " << inputthis.tunit->uName; */
 
-  auto miniTeX = [&](const std::string& str) -> std::string {
-         std::stringstream TeXd;
-         auto parse_err = [&](const std::string& spec){
-                cerr << "Error: in miniTeX-parsing physquantity printout \""<<str<<"\":\n"
-                     << spec << std::endl;
-                abort();
-              };
-         for(unsigned i=0; i<str.length(); ++i) {
-           if(str[i]=='\\') {
-             ++i;
-             if(str[i]==':'){
-               TeXd << " ";
-              }else if(str.substr(i,2)=="pm") {
-               TeXd << u8"\u00b1";
-               i+=1;
-              }else if(str.substr(i,4)=="cdot"){
-               TeXd << u8"\u22c5";
-               i+=3;
-              }else if(str.substr(i,7)=="mathrm{"){
-               i+=7;
-               for(unsigned brlyr=1; brlyr>0; ++i) {
-                 if(str[i]=='{') ++brlyr;
-                  else if(str[i]=='}') --brlyr;
-                  else TeXd << str[i];
-               }
-               --i;
-              }else{
-               parse_err("Backslash unfollowed by a recognized command.");
-             }
-            }else if(str[i]=='$'){
-            }else if(str[i]=='^'){
-             ++i;
-             if(str[i]=='{') {
-               for(++i; str[i]!='}'; ++i) {
-                 if(str[i]=='{')
-                   parse_err("Nested braces for superscripts not supported.");
-                 TeXd << superscript(str[i]);
-               }
-              }else{
-               TeXd << superscript(str[i]);
-             }
-            }else{
-             TeXd << str[i];
-           }
-         }
-         return TeXd.str();
-       };
 
   target << miniTeX(targ.str());
 

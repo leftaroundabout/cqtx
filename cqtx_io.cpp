@@ -570,6 +570,176 @@ typedef LaTeXistream<ifstream> LaTeXifstream;
 
 
 
+auto miniTeX_superscript(char c) -> std::string {
+  switch (c) {
+   case '0': return u8"\u2070";
+   case '1': return u8"\u00b9";
+   case '2': return u8"\u00b2";
+   case '3': return u8"\u00b3";
+   case '4': return u8"\u2074";
+   case '5': return u8"\u2075";
+   case '6': return u8"\u2076";
+   case '7': return u8"\u2077";
+   case '8': return u8"\u2078";
+   case '9': return u8"\u2079";
+   case '+': return u8"\u207a";
+   case '-': return u8"\u207b";
+   case '/': return u8"\u141F"; //actually CANADIAN SYLLABICS FINAL ACUTE,
+                               // for the lack of a proper superscript solidus
+   default: return std::string(1,c);
+  }
+};
+auto miniTeX_subscript(char c) -> std::string {
+  switch (c) {
+   case '0': return u8"\u2080";
+   case '1': return u8"\u0081";
+   case '2': return u8"\u0082";
+   case '3': return u8"\u0083";
+   case '4': return u8"\u2084";
+   case '5': return u8"\u2085";
+   case '6': return u8"\u2086";
+   case '7': return u8"\u2087";
+   case '8': return u8"\u2088";
+   case '9': return u8"\u2089";
+   case '+': return u8"\u208a";
+   case '-': return u8"\u208b";
+   case '=': return u8"\u208c";
+   case '(': return u8"\u208d";
+   case ')': return u8"\u208e";
+   case 'a': return u8"\u2090";
+   case 'e': return u8"\u2091";
+   case 'i': return u8"\u1d62";
+   case 'j': return u8"\u2c7c";
+   case 'o': return u8"\u2092";
+   case 'r': return u8"\u1d63";
+   case 'u': return u8"\u1d64";
+   case 'v': return u8"\u1d65";
+   case 'x': return u8"\u2093";
+   default: return std::string(1,c);
+  }
+};
+
+
+auto miniTeX(const std::string& str) -> std::string {
+  std::stringstream TeXd;
+  auto parse_err = [&](const std::string& spec){
+         cerr << "Error: in miniTeX-parsing printout \""<<str<<"\":\n"
+              << spec << std::endl;
+         abort();
+       };
+  for(unsigned i=0; i<str.length(); ++i) {
+    if(str[i]=='\\') {
+      ++i;
+      if(str[i]==':'){
+        TeXd << " ";
+       }else if(str.substr(i,2)=="pm") {
+        TeXd << u8"\u00b1";   i+=1;
+       }else if(str.substr(i,4)=="cdot"){
+        TeXd << u8"\u22c5";   i+=3;
+        
+       }else if(str.substr(i,5)=="alpha"){
+        TeXd << u8"\u03b1";   i+=4;
+       }else if(str.substr(i,4)=="beta"){
+        TeXd << u8"\u03b2";   i+=3;
+       }else if(str.substr(i,5)=="gamma"){
+        TeXd << u8"\u03b3";   i+=4;
+       }else if(str.substr(i,5)=="delta"){
+        TeXd << u8"\u03b4";   i+=4;
+       }else if(str.substr(i,7)=="epsilon"){
+        TeXd << u8"\u03b5";   i+=6;
+       }else if(str.substr(i,10)=="varepsilon"){
+        TeXd << u8"\u03b5";   i+=9;
+       }else if(str.substr(i,4)=="zeta"){
+        TeXd << u8"\u03b6";   i+=3;
+       }else if(str.substr(i,3)=="eta"){
+        TeXd << u8"\u03b7";   i+=2;
+       }else if(str.substr(i,5)=="theta"){
+        TeXd << u8"\u03b8";   i+=4;
+       }else if(str.substr(i,8)=="vartheta"){
+        TeXd << u8"\u03d1";   i+=7;
+       }else if(str.substr(i,4)=="iota"){
+        TeXd << u8"\u03b9";   i+=3;
+       }else if(str.substr(i,5)=="kappa"){
+        TeXd << u8"\u03ba";   i+=4;
+       }else if(str.substr(i,6)=="lambda"){
+        TeXd << u8"\u03bb";   i+=5;
+       }else if(str.substr(i,2)=="mu"){
+        TeXd << u8"\u03bc";   i+=1;
+       }else if(str.substr(i,2)=="nu"){
+        TeXd << u8"\u03bd";   i+=1;
+       }else if(str.substr(i,2)=="xi"){
+        TeXd << u8"\u03be";   i+=1;
+       }else if(str.substr(i,7)=="omikron"){
+        TeXd << u8"\u03bf";   i+=6;
+       }else if(str.substr(i,2)=="pi"){
+        TeXd << u8"\u03c0";   i+=1;
+       }else if(str.substr(i,3)=="rho"){
+        TeXd << u8"\u03c1";   i+=2;
+       }else if(str.substr(i,6)=="varrho"){
+        TeXd << u8"\u03c1";   i+=5;
+       }else if(str.substr(i,5)=="sigma"){
+        TeXd << u8"\u03c3";   i+=4;
+       }else if(str.substr(i,3)=="tau"){
+        TeXd << u8"\u03c4";   i+=2;
+       }else if(str.substr(i,7)=="upsilon"){
+        TeXd << u8"\u03c5";   i+=6;
+       }else if(str.substr(i,3)=="phi"){
+        TeXd << u8"\u03d5";   i+=2;
+       }else if(str.substr(i,6)=="varphi"){
+        TeXd << u8"\u03c6";   i+=5;
+       }else if(str.substr(i,3)=="chi"){
+        TeXd << u8"\u03c7";   i+=2;
+       }else if(str.substr(i,3)=="psi"){
+        TeXd << u8"\u03c8";   i+=2;
+       }else if(str.substr(i,5)=="omega"){
+        TeXd << u8"\u03c9";   i+=4;
+        
+       }else if(str.substr(i,7)=="mathrm{"){
+        i+=7;
+        for(unsigned brlyr=1; brlyr>0; ++i) {
+          if(str[i]=='{') ++brlyr;
+           else if(str[i]=='}') --brlyr;
+           else TeXd << str[i];
+        }
+        --i;
+       }else{
+        parse_err("Backslash unfollowed by a recognized command.");
+      }
+     }else if(str[i]=='$'){
+     }else if(str[i]=='^'){
+      ++i;
+      if(str[i]=='{') {
+        for(++i; str[i]!='}'; ++i) {
+          if(str[i]=='{')
+            parse_err("Nested braces for miniTeX_superscripts not supported.");
+          TeXd << miniTeX_superscript(str[i]);
+        }
+       }else{
+        TeXd << miniTeX_superscript(str[i]);
+      }
+     }else if(str[i]=='_'){
+      ++i;
+      if(str[i]=='{') {
+        for(++i; str[i]!='}'; ++i) {
+          if(str[i]=='{')
+            parse_err("Nested braces for miniTeX_subscripts not supported.");
+          TeXd << miniTeX_subscript(str[i]);
+        }
+       }else{
+        TeXd << miniTeX_subscript(str[i]);
+      }
+     }else if(0 && str[i]>='a' && str[i]<='z'){  // italic math letters. Turns out these
+      std::string basestr = u8"\U0001d44e";     //  just make the symbols harder to read.
+      basestr[3] += (str[i] - 'a');
+      TeXd << basestr;
+     }else{
+      TeXd << str[i];
+    }
+  }
+  return TeXd.str();
+}
+
+
 
 
 

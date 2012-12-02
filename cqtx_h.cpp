@@ -604,10 +604,10 @@ class measure : public std::vector<physquantity> {
 
 
 std::ostream &operator<<(std::ostream &tgt, const measure &src){
-  for (measure::const_iterator i=src.begin(); i!=src.end(); ++i){
-    if (i->caption != cptNULL) tgt << *i->caption << ": ";
+  for (auto& q: src) {
+    if (q.caption != cptNULL) tgt << miniTeX(*q.caption) << ": ";
      else tgt << "(unnamed) ";
-    tgt << *i << std::endl;
+    tgt << q << std::endl;
   }
   return tgt;
 }
