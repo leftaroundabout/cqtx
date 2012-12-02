@@ -1346,8 +1346,29 @@ measure ffit_spectrum( const measureseq &fnplot  // w/noise level track please!
                                  , evolution_minimizer::solutioncertaintycriteria::doublevalue()
                                  );
   
+  measure result;
+  
+  for (unsigned i=0; i<npeaks; ++i) {
+    result.let(spectrpeakwidth_name+LaTeX_subscript(i))
+         = (linkings & link_peaks_width)
+           ? fitthisback.result()[spectrpeakwidth_name]
+           : fitthisback.result()[spectrpeakwidth_name+LaTeX_subscript(i)];
+  }
+  for (unsigned i=0; i<npeaks; ++i) {
+    result.let(*Afind+LaTeX_subscript(i))
+         = (linkings & link_peaks_height)
+           ? fitthisback.result()[*Afind+"_0"]
+           : fitthisback.result()[*Afind+LaTeX_subscript(i)];
+  }
+  for (unsigned i=0; i<npeaks; ++i) {
+    result.let(*xfind+LaTeX_subscript(i))
+         = (linkings & link_peaks_pos)
+           ? fitthisback.result()[*xfind+"_0"]
+           : fitthisback.result()[*xfind+LaTeX_subscript(i)];
+  }
+   
 //  #endif
-  return fitthisback.result();
+  return result;
 }
 
 
