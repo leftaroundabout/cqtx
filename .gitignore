@@ -29,4 +29,6 @@ test/bin/*
 # Swap junk files introduced by certain file systems
 *.swp
 
+*/cpyedstuff/*
+
 *.fuse_hidden*
