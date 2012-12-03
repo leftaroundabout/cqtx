@@ -1262,7 +1262,7 @@ class physquantity {                           //Klasse f\"ur physikalische Gr\"
   bool operator <=(const physquantity &cmpv) const{
     return !(*this - cmpv).positive();
   }
-  bool equalsRgdErr(physquantity cmpv) const{
+  bool equals_rs_uncertainty(physquantity cmpv) const{
     cmpv -= *this;
     return !(cmpv.positivelypositive() || cmpv.positivelynegative());
   }

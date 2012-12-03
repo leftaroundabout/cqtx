@@ -61,6 +61,9 @@ class phmsq_function_base{
       rename_var(*io, *in);
     return *this;
   }
+  
+  auto params_list()const -> std::vector<captfinder> {
+    return argdrfs;                                  }
 
   virtual measure example_parameterset() const{
     measure result;
@@ -1006,10 +1009,10 @@ if(0)cout<< "Calc multiplicity.\nAverage dist: " << avgd
       for (measure::iterator i = result.begin(); i!=result.end(); ++i)
         *i = i->error() /* meanerrstosdv */* (r() / 2.);
      }else{
-      result.operator=(sched.random_location())
-            .remove_errors()
-            .by_i_substract(sched.random_location())
-            .multiply_all_by(r()/2);
+      result = sched.random_location();
+      result.remove_errors();
+      result.by_i_substract(sched.random_location());
+      result.multiply_all_by(r()/2);
     }
     return result;
   }
@@ -1443,52 +1446,7 @@ class spectrumfitter {
   captfinder xfind, Afind, noisefind;
   spectfit_linkingt linkings;
   measureseq start_fnplot;
-#if 0
-  struct ptlfit_outcome {
-    measureseq *peaksptr;
-    bool failed() {return peaksptr==NULL;}
-    measureseq &peaks(){
-      if(failed()) {
-        cerr << "Tried to get the peaks from an unsuccessful ptlfit_outcome!";
-        abort();
-      }
-      return *peaksptr;
-    }
-
-    ptlfit_outcome(): peaksptr(NULL) {}
-    ptlfit_outcome(const measureseq &pks): peaksptr(new measureseq(pks)) {
-//      cout<<"Copied measureseq to ptlfit_outcome:\n"/*<<peaks()*/<<"(to address "<<peaksptr<<")\n";
-    }
-    ptlfit_outcome(ptlfit_outcome &&cp): peaksptr(cp.peaksptr) {
-      cp.peaksptr=nullptr;
-//      if(peaksptr)cout<<"Move-Copied ptlfit_outcome with measureseq:\n"/*<<peaks()*/;else cout<<"Move-copied failure ptlfit_outcome\n";
-    }
-    ptlfit_outcome &operator=(const ptlfit_outcome &cp) {
-      delete peaksptr;
-      peaksptr = cp.peaksptr;
-//      if(peaksptr)cout<<"Assigned ptlfit_outcome with measureseq:\n"/*<<peaks()*/;else cout<<"Assigned failure ptlfit_outcome\n";
-      return *this;
-    }
-    ptlfit_outcome &operator=(ptlfit_outcome &&cp) {
-      delete peaksptr;
-      peaksptr = cp.peaksptr;
-      cp.peaksptr=nullptr;
-//      if(peaksptr)cout<<"Move-assigned ptlfit_outcome with measureseq:\n"/*<<peaks()*/;else cout<<"Move-assigned failure ptlfit_outcome\n";
-      return *this;
-    }
-    ptlfit_outcome(const ptlfit_outcome &cp):peaksptr(cp.peaksptr) {
-      if(peaksptr) peaksptr = new measureseq(*peaksptr);
-//      if(peaksptr)cout<<"Copied ptlfit_outcome with measureseq:\n"/*<<peaks()*/<<"(old address: "<<cp.peaksptr<<", new address: "<<peaksptr<<")\n";else cout<<"Copied failure ptlfit_outcome\n";
-    }
-    ~ptlfit_outcome(){
-//      if(peaksptr)cout<<"Deleting ptlfit_outcome with measureseq:\n"/*<<peaks()*/<<"(address: "<<peaksptr<<")\n";else cout<<"Deleting ptlfit_outcome with no peaks.\n";
-      delete peaksptr;
-    }
-  };
-  ptlfit_outcome ptlfit_failure() {return ptlfit_outcome();}
-#else
   typedef maybe<measureseq> ptlfit_outcome;
-#endif
   static const unsigned minimum_spectrumfit_mpoints = 96
                       , min_spectrumfit_mpoints_per_peak = 64;
  
@@ -1596,68 +1554,7 @@ class spectrumfitter {
           (*result).push_back(p);
       }
     }
-#if 0    
-    typedef const measure* Cmsrp;
-    typedef identify_peaksrepmatch_canditate_rankcmp idccmp;
-    delegations< std::vector< std::set< Cmsrp, idccmp > > > intersection_pks;
-    for (auto side=delegation_l(); side.ok(); ++side) {
-      for (auto i : *delegatedwn[side])
-        if (xfind(i)>spborders.l && xfind(i)<spborders.r)
-          intersection_pks[side].push_back(std::set<Cmsrp,idccmp>(
-            idccmp{&i, xfind}
-          ));
-    }
-  /*
-    for (auto i in delegatedwnr.peaks())
-      if (xfind(*i)>liborder && xfind(*)<riborder) intersect_pks_r.push_back(make_pair(*i, nullptr));
-  */
-    
-    for (auto side=delegation_l(); side.ok(); ++side) {
-      for (auto i : intersection_pks[side]) {
-        for (auto j : *delegatedwn[side.other()]) {
-          i.insert(&j);
-        }
-      }
-    }
-    std::map<Cmsrp,Cmsrp> agreed;
-    for (auto i : intersection_pks.l) {
-      bool agrees=true;
-      for (auto j : intersection_pks.r) {
-        if ( (*i.begin() == j.key_comp().basemsr)
-           ^ (*j.begin() == i.key_comp().basemsr) ) {
-          agrees=false;
-          break;
-        }
-      }
-      if (agrees)
-        agreed[*i.begin()] = i.key_comp().basemsr;
-    }
-    for (auto i : intersection_pks.r) {
-      if (agreed.find(i.key_comp().basemsr) == agreed.end())
-        agreed[*i.begin()] = i.key_comp().basemsr;
-    }
-    std::set<Cmsrp> all_intersect_finds;
-    
-    for (auto i : agreed) {
-      all_intersect_finds.insert(i.first); all_intersect_finds.insert(i.second); }
-    
-    ptlfit_outcome result(measureseq(0));
-    
-    for(auto s : delegatedwn){
-      for(auto i : *s){
-        if (all_intersect_finds.find(&i)==all_intersect_finds.end())
-          (*result).push_back(i);
-      }
-    }
-    
-    for (auto i : agreed) {
-      if (xfind(*i.first).error() < xfind(*i.second).error())
-        (*result).push_back(*i.first);
-       else
-        (*result).push_back(*i.second);
-    }
-#endif
-    if (spectrumfit_is_ok(fnplot, *result)) {
+   if (spectrumfit_is_ok(fnplot, *result)) {
 #ifdef SPECTRUMFITTER_PROCESSMESSAGES
     cout << indent(nestdepth) << "matching of delegations " << colorize_str("successful", QTeXgrcolors::i_green) << ".\n";
 #endif
@@ -1765,13 +1662,119 @@ class spectrumfitter {
              );
   }
   measureseq result() {
-    for(auto res : fit_spectrum_process(start_fnplot,0)) return res;
-#ifdef SPECTRUMFITTER_PROCESSMESSAGES
- //   cout << "FINAL result:\n(@ address " << res.peaksptr << ")\n" << res.peaks();
+    for(auto res : fit_spectrum_process(start_fnplot,0)) {
+#ifdef SPECTRUMFITTER_PROCESSMESSAGES0
+      cout << "FINAL result:\n(@ address " << res.peaksptr << ")\n" << res.peaks();
 #endif
+      return res;
+    }
     cerr << "Spectrum fit failed.\n";
     abort();
     return result();
+  }
+  
+  measureseq result_comp_combopeaks() {
+    MultiPeakFn probesim(1);
+    probesim.rename_var("x, x_i, A_i", *xfind + ", " + *xfind+"_i, " + *Afind+"_i", LaTeXindex("i").from(0).unto(1));
+    
+    measureseq cplxres = result();
+    unsigned n = cplxres.size();
+    
+    std::vector<maybe<unsigned>> superpeaks(n, nothing);
+    std::vector<std::vector<unsigned>> subpeaks(n);
+    
+    captfinder wfind(spectrpeakwidth_name), w0find(spectrpeakwidth_name+"_0")
+             , A0find(*Afind+"_0"), x0find(*xfind+"_0");
+    
+    auto is_subpeak = [&]( unsigned j, unsigned i ) -> bool { 
+                        measure ipeak, &superpk = cplxres[i], &subcand = cplxres[j];
+                        ipeak.let(*w0find) = wfind(superpk);
+                        ipeak.let(*x0find) = xfind(superpk);
+                        ipeak.let(*A0find) = Afind(superpk);
+                        ipeak.let(*xfind) = xfind(subcand);
+                        return Afind(subcand) < probesim(ipeak);
+                      };
+    
+    for(unsigned i=0; i<n; ++i) {       // build up a hierarchy of peaks: for each
+      for(unsigned j=0; j<n; ++j) {    //  peakᵢ find all peakⱼs with Aⱼ(xⱼ) < Aᵢ(xⱼ)
+                                      //   and list them (and their respective own subpeaks).
+        if(j!=i && superpeaks[j].is_nothing() && is_subpeak(j, i)) {
+          subpeaks[i].push_back(j);
+          for(auto c: subpeaks[j]) {
+            subpeaks[i].push_back(c);
+            superpeaks[c] = just(i);
+          }
+          superpeaks[j] = just(i);
+        }
+      }
+    }
+    
+    measureseq compd_result;
+    
+    for(unsigned i=0; i<n; ++i) {
+#ifdef SPECTRUMFITTER_PROCESSMESSAGES
+      std::cout << "Peak #" << i << " is ";
+#endif
+      if(superpeaks[i].is_nothing()) {
+#ifdef SPECTRUMFITTER_PROCESSMESSAGES
+        std::cout << "a top-peak, ";
+#endif
+        if(subpeaks[i].size()==0) {
+#ifdef SPECTRUMFITTER_PROCESSMESSAGES
+          std::cout << "primitive. Pass it as result." << std::endl;
+#endif
+          compd_result.push_back(cplxres[i]);
+         }else{
+#ifdef SPECTRUMFITTER_PROCESSMESSAGES
+          std::cout << "composite, with subpeaks";
+          for(auto& sb: subpeaks[i]) std::cout <<" #"<< sb;
+          std::cout << ". Unify them." << std::endl;
+#endif
+          measureseq spectrum_spwk;
+          
+          phq_interval peak_i( centered_about(xfind(cplxres[i]))
+                             , interval_size (8*wfind(cplxres[i])) );
+          
+          for(auto& pt: start_fnplot) {
+            if( peak_i.strictly_includes(xfind(pt)) )
+              spectrum_spwk.push_back(pt);
+          }
+          
+          for(unsigned j=0; j<n; ++j) {
+            if(j!=i && superpeaks[j] != just(i)) {
+              measure p = cplxres[j];
+              p.let(*x0find) = xfind(cplxres[j]);
+              p.let(*w0find) = wfind(cplxres[j]);
+              p.let(*A0find) = Afind(cplxres[j]);
+              p.push_back(0);
+              for(auto& q: spectrum_spwk) {
+                p.back().overwritewith(xfind(q));
+                Afind(q) -= probesim(p);
+              }
+            }
+          }
+#ifdef SPECTRUMFITTER_PROCESSMESSAGES
+          {
+            std::stringstream owvbn(""); owvbn<<"/tmp/spectr_cpeak-unify_rng"<<compd_result.size()<<".qda";
+            QTeXdiagmaster spectrview("/tmp/spectr_-cpeak"+std::string(1,'0'+compd_result.size()));
+            spectrview.insertCurve(spectrum_spwk, xfind, Afind);
+          }
+#endif
+          
+          compd_result.push_back(
+                 ffit_spectrum<MultiPeakFn>
+                      ( spectrum_spwk, xfind, Afind, noisefind, 1, linkings )
+                                  .pack_subscripted().front()                 );
+          
+        }
+       }else{
+#ifdef SPECTRUMFITTER_PROCESSMESSAGES
+        std::cout << "a sub-peak, covered by peak #" << superpeaks[i].from_just() << "; ignore it here." << std::endl;
+#endif
+      }
+    }
+    
+    return compd_result;
   }
 };
 
@@ -1782,7 +1785,7 @@ measureseq fit_spectrum( const measureseq fnplot
                        , spectfit_linkingt linkings = 0x0
                        ) {
   spectrumfitter<MultiPeakFn> fitter(fnplot,xfind,Afind,linkings);
-  return fitter.result();
+  return fitter.result_comp_combopeaks();
 }
 
 
