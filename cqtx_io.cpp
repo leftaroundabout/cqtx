@@ -592,9 +592,9 @@ auto miniTeX_superscript(char c) -> std::string {
 auto miniTeX_subscript(char c) -> std::string {
   switch (c) {
    case '0': return u8"\u2080";
-   case '1': return u8"\u0081";
-   case '2': return u8"\u0082";
-   case '3': return u8"\u0083";
+   case '1': return u8"\u2081";
+   case '2': return u8"\u2082";
+   case '3': return u8"\u2083";
    case '4': return u8"\u2084";
    case '5': return u8"\u2085";
    case '6': return u8"\u2086";
