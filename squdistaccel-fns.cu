@@ -298,17 +298,15 @@ double cudaaccel_sqdf_multigaussian_VARS_x0_sigma_A<0>
 }
 
 
-const cudaNonlinSqdistEvalFunction
-   cudaaccel_sqdf_multigaussian_VARS_x0_sigma_A_vtable[]
-        = { cudaaccel_sqdf_multigaussian_VARS_x0_sigma_A<0>
-//          , cudaaccel_sqdf_gaussian_VAR_x0_sigma_A
-          , cudaaccel_sqdf_multigaussian_VARS_x0_sigma_A<1>
-          , cudaaccel_sqdf_multigaussian_VARS_x0_sigma_A<2>
-          , cudaaccel_sqdf_multigaussian_VARS_x0_sigma_A<3>  /*
-          , ...                                        ... */ , cudaaccel_sqdf_multigaussian_VARS_x0_sigma_A<4>, cudaaccel_sqdf_multigaussian_VARS_x0_sigma_A<5>, cudaaccel_sqdf_multigaussian_VARS_x0_sigma_A<6>, cudaaccel_sqdf_multigaussian_VARS_x0_sigma_A<7>, cudaaccel_sqdf_multigaussian_VARS_x0_sigma_A<8>, cudaaccel_sqdf_multigaussian_VARS_x0_sigma_A<9>, cudaaccel_sqdf_multigaussian_VARS_x0_sigma_A<10>, cudaaccel_sqdf_multigaussian_VARS_x0_sigma_A<11>, cudaaccel_sqdf_multigaussian_VARS_x0_sigma_A<12>, cudaaccel_sqdf_multigaussian_VARS_x0_sigma_A<13>, cudaaccel_sqdf_multigaussian_VARS_x0_sigma_A<14>
-          , cudaaccel_sqdf_multigaussian_VARS_x0_sigma_A<15>  };
-const unsigned n_instantiated_cudaaccel_sqdf_multigaussian_VARS_x0_sigma_A
-                                                       = 16;
+
+#define MANY_SQDF_TEMPLATE_INSTANTIATIONS(tf)                                                                                                  \
+const cudaNonlinSqdistEvalFunction tf##_vtable[]                                                                                               \
+        = { tf<0>, tf<1>, tf<2>, tf<3>, tf<4>, tf<5>, tf<6>, tf<7>, tf<8>, tf<9>, tf<10>, tf<11>, tf<12>, tf<13>, tf<14>, tf<15>               \
+          , tf<16>, tf<17>, tf<18>, tf<19>, tf<20>, tf<21>, tf<22>, tf<23>, tf<24>, tf<25>, tf<26>, tf<27>, tf<28>, tf<29>, tf<30>, tf<31> };  \
+const unsigned n_instantiated_##tf = 32;
+
+
+MANY_SQDF_TEMPLATE_INSTANTIATIONS(cudaaccel_sqdf_multigaussian_VARS_x0_sigma_A)
 
 cudaNonlinSqdistEvalFunction cudaaccelsqd_multigaussian_VARS_x0_sigma_A
               ( unsigned npeaks ) {
@@ -380,16 +378,8 @@ double cudaaccel_sqdf_multigaussian_VARS_x0_sigma_A_UNCRT_RET
 }
 
 
-const cudaNonlinSqdistEvalFunction
-   cudaaccel_sqdf_multigaussian_VARS_x0_sigma_A_UNCRT_RET_vtable[]
-        = { cudaaccel_sqdf_multigaussian_VARS_x0_sigma_A_UNCRT_RET<0>
-          , cudaaccel_sqdf_multigaussian_VARS_x0_sigma_A_UNCRT_RET<1>
-          , cudaaccel_sqdf_multigaussian_VARS_x0_sigma_A_UNCRT_RET<2>
-          , cudaaccel_sqdf_multigaussian_VARS_x0_sigma_A_UNCRT_RET<3>  /*
-          , ...                                                  ... */ , cudaaccel_sqdf_multigaussian_VARS_x0_sigma_A_UNCRT_RET<4>, cudaaccel_sqdf_multigaussian_VARS_x0_sigma_A_UNCRT_RET<5>, cudaaccel_sqdf_multigaussian_VARS_x0_sigma_A_UNCRT_RET<6>, cudaaccel_sqdf_multigaussian_VARS_x0_sigma_A_UNCRT_RET<7>, cudaaccel_sqdf_multigaussian_VARS_x0_sigma_A_UNCRT_RET<8>, cudaaccel_sqdf_multigaussian_VARS_x0_sigma_A_UNCRT_RET<9>, cudaaccel_sqdf_multigaussian_VARS_x0_sigma_A_UNCRT_RET<10>, cudaaccel_sqdf_multigaussian_VARS_x0_sigma_A_UNCRT_RET<11>, cudaaccel_sqdf_multigaussian_VARS_x0_sigma_A_UNCRT_RET<12>, cudaaccel_sqdf_multigaussian_VARS_x0_sigma_A_UNCRT_RET<13>, cudaaccel_sqdf_multigaussian_VARS_x0_sigma_A_UNCRT_RET<14>
-          , cudaaccel_sqdf_multigaussian_VARS_x0_sigma_A_UNCRT_RET<15>  };
-const unsigned n_instantiated_cudaaccel_sqdf_multigaussian_VARS_x0_sigma_A_UNCRT_RET
-                                                                 = 16;
+MANY_SQDF_TEMPLATE_INSTANTIATIONS(cudaaccel_sqdf_multigaussian_VARS_x0_sigma_A_UNCRT_RET)
+
 
 cudaNonlinSqdistEvalFunction cudaaccelsqd_multigaussian_VARS_x0_sigma_A_UNCRT_RET
               ( unsigned npeaks ) {
@@ -468,17 +458,8 @@ double cudaaccel_sqdf_multigaussian_VARS_x0_sigma_A_UNCRT_x
 }
 
 
+MANY_SQDF_TEMPLATE_INSTANTIATIONS(cudaaccel_sqdf_multigaussian_VARS_x0_sigma_A_UNCRT_x)
 
-const cudaNonlinSqdistEvalFunction
-   cudaaccel_sqdf_multigaussian_VARS_x0_sigma_A_UNCRT_x_vtable[]
-        = { cudaaccel_sqdf_multigaussian_VARS_x0_sigma_A_UNCRT_x<0>
-          , cudaaccel_sqdf_multigaussian_VARS_x0_sigma_A_UNCRT_x<1>
-          , cudaaccel_sqdf_multigaussian_VARS_x0_sigma_A_UNCRT_x<2>
-          , cudaaccel_sqdf_multigaussian_VARS_x0_sigma_A_UNCRT_x<3>  /*
-          , ...                                                ... */ , cudaaccel_sqdf_multigaussian_VARS_x0_sigma_A_UNCRT_x<4>, cudaaccel_sqdf_multigaussian_VARS_x0_sigma_A_UNCRT_x<5>, cudaaccel_sqdf_multigaussian_VARS_x0_sigma_A_UNCRT_x<6>, cudaaccel_sqdf_multigaussian_VARS_x0_sigma_A_UNCRT_x<7>, cudaaccel_sqdf_multigaussian_VARS_x0_sigma_A_UNCRT_x<8>, cudaaccel_sqdf_multigaussian_VARS_x0_sigma_A_UNCRT_x<9>, cudaaccel_sqdf_multigaussian_VARS_x0_sigma_A_UNCRT_x<10>, cudaaccel_sqdf_multigaussian_VARS_x0_sigma_A_UNCRT_x<11>, cudaaccel_sqdf_multigaussian_VARS_x0_sigma_A_UNCRT_x<12>, cudaaccel_sqdf_multigaussian_VARS_x0_sigma_A_UNCRT_x<13>, cudaaccel_sqdf_multigaussian_VARS_x0_sigma_A_UNCRT_x<14>
-          , cudaaccel_sqdf_multigaussian_VARS_x0_sigma_A_UNCRT_x<15>  };
-const unsigned n_instantiated_cudaaccel_sqdf_multigaussian_VARS_x0_sigma_A_UNCRT_x
-                                                               = 16;
 
 cudaNonlinSqdistEvalFunction cudaaccelsqd_multigaussian_VARS_x0_sigma_A_UNCRT_x
               ( unsigned npeaks ) {
@@ -560,17 +541,8 @@ double cudaaccel_sqdf_multigaussian_VARS_x0_sigma_A_UNCRT_RET_x
   return result;
 }
 
+MANY_SQDF_TEMPLATE_INSTANTIATIONS(cudaaccel_sqdf_multigaussian_VARS_x0_sigma_A_UNCRT_RET_x)
 
-const cudaNonlinSqdistEvalFunction
-   cudaaccel_sqdf_multigaussian_VARS_x0_sigma_A_UNCRT_RET_x_vtable[]
-        = { cudaaccel_sqdf_multigaussian_VARS_x0_sigma_A_UNCRT_RET_x<0>
-          , cudaaccel_sqdf_multigaussian_VARS_x0_sigma_A_UNCRT_RET_x<1>
-          , cudaaccel_sqdf_multigaussian_VARS_x0_sigma_A_UNCRT_RET_x<2>
-          , cudaaccel_sqdf_multigaussian_VARS_x0_sigma_A_UNCRT_RET_x<3>  /*
-          , ...                                                    ... */ , cudaaccel_sqdf_multigaussian_VARS_x0_sigma_A_UNCRT_RET_x<4>, cudaaccel_sqdf_multigaussian_VARS_x0_sigma_A_UNCRT_RET_x<5>, cudaaccel_sqdf_multigaussian_VARS_x0_sigma_A_UNCRT_RET_x<6>, cudaaccel_sqdf_multigaussian_VARS_x0_sigma_A_UNCRT_RET_x<7>, cudaaccel_sqdf_multigaussian_VARS_x0_sigma_A_UNCRT_RET_x<8>, cudaaccel_sqdf_multigaussian_VARS_x0_sigma_A_UNCRT_RET_x<9>, cudaaccel_sqdf_multigaussian_VARS_x0_sigma_A_UNCRT_RET_x<10>, cudaaccel_sqdf_multigaussian_VARS_x0_sigma_A_UNCRT_RET_x<11>, cudaaccel_sqdf_multigaussian_VARS_x0_sigma_A_UNCRT_RET_x<12>, cudaaccel_sqdf_multigaussian_VARS_x0_sigma_A_UNCRT_RET_x<13>, cudaaccel_sqdf_multigaussian_VARS_x0_sigma_A_UNCRT_RET_x<14>
-          , cudaaccel_sqdf_multigaussian_VARS_x0_sigma_A_UNCRT_RET_x<15>  };
-const unsigned n_instantiated_cudaaccel_sqdf_multigaussian_VARS_x0_sigma_A_UNCRT_RET_x
-                                                                   = 16;
 
 cudaNonlinSqdistEvalFunction cudaaccelsqd_multigaussian_VARS_x0_sigma_A_UNCRT_RET_x
               ( unsigned npeaks ) {
