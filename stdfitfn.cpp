@@ -557,6 +557,25 @@ class*/combinedPeaks_fittable_spectrum,/*: public*/fittable_phmsqfn) {
 };
 
 
+#define COMBINEDPEAKS_FITTABLE_SPECTRUM(combdspectrum_name, basespectrum, ncombined, combiner, x0name, sigmaname, Aname) \
+struct combdspectrum_name: combinedPeaks_fittable_spectrum {                                                             \
+  combdspectrum_name(unsigned npeaks)                                                                                    \
+    : combinedPeaks_fittable_spectrum (                                                                                  \
+         basespectrum(npeaks*ncombined)                                                                                  \
+       , ncombined, combiner                                                                                             \
+       , x0name, sigmaname, Aname                                                                                        \
+       , npeaks                       )                                                                                  \
+  {}                                                                                                                     \
+  virtual combinedPeaks_fittable_spectrum* clone() const override                           {                            \
+    return new combdspectrum_name(static_cast<const combdspectrum_name&>(*this)); }                                      \
+  virtual combinedPeaks_fittable_spectrum* moved() override                                       {                      \
+    return new combdspectrum_name(static_cast<combdspectrum_name&&>(std::move(*this))); }                                \
+  virtual ~combdspectrum_name() override {}                                                                              \
+}
+
+
+
+
 
                                                                COPYABLE_PDERIVED_CLASS(/*
 class*/fittable_exponentialfn,/*: public*/fittable_phmsqfn) {
