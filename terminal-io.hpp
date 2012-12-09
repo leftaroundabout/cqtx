@@ -22,3 +22,36 @@ auto colorize_str(const std::string& srcstr, QTeXgrcolor c) -> std::string {
   
   return ansipre + srcstr + "\033[0m";
 }
+
+
+
+class coloredStrm {
+  std::vector<std::string> colorchunks;
+  std::ostringstream contentstream;
+  QTeXgrcolor c;
+ public:
+  coloredStrm(QTeXgrcolor c): c(c){}
+  auto str()const -> std::string {
+    std::ostringstream acc;
+    for(auto& chnk: colorchunks) acc << chnk;
+    acc << colorize_str(contentstream.str(), c);
+    return acc.str();
+  }
+  template<typename T> 
+  coloredStrm& operator<<(const T& obj) {
+    contentstream << obj;
+    return *this;
+  }
+  coloredStrm& operator<<(const coloredStrm& obj) {
+    colorchunks.push_back(colorize_str(contentstream.str(), c));
+    contentstream.clear(); contentstream.str("");
+    colorchunks.push_back(obj.str());
+    return *this;
+  }
+};
+
+
+std::ostream& operator<<(std::ostream& sink, const coloredStrm& s) {
+  sink << s.str();
+  return sink;
+}
