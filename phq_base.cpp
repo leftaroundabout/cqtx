@@ -1211,30 +1211,30 @@ class physquantity {                           //Klasse f\"ur physikalische Gr\"
   }
   bool positivelypositive() const{
     if (tunit==NULL){
-      if (valincgs - myError.valincgs > 0) return 1; else return 0;
+      return valincgs - std::abs(myError.valincgs) > 0;
      }else{
-      if (valintu - myError.valintu > 0) return 1; else return 0;
+      return valintu - std::abs(myError.valintu) > 0;
     }
   }
   bool positivelynegative() const{
     if (tunit==NULL){
-      if (valincgs + myError.valincgs < 0) return 1; else return 0;
+      return valincgs + std::abs(myError.valincgs) < 0;
      }else{
-      if (valintu + myError.valintu < 0) return 1; else return 0;
+      return valintu + std::abs(myError.valintu) < 0;
     }
   }
   bool positive() const{
     if (tunit==NULL){
-      if (valincgs > 0) return 1; else return 0;
+      return valincgs > 0;
      }else{
-      if (valintu > 0) return 1; else return 0;
+      return valintu > 0;
     }
   }
   bool negative() const{
     if (tunit==NULL){
-      if (valincgs < 0) return 1; else return 0;
+      return valincgs < 0;
      }else{
-      if (valintu < 0) return 1; else return 0;
+      return valintu < 0;
     }
   }
   physquantity &rectify(){
