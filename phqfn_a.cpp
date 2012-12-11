@@ -294,25 +294,41 @@ class fittable_phmsqfn : public phmsq_function{
         }
       }
       try {
+#ifdef DIMANALYSIS_EXAMPLEPARAMS_PROCESSMESSAGES
         std::cout << "Trying to eval phmsq_function with parameters\n"
                   << expprms << "... ";
+#endif
         desiredret - operator()(expprms);
+#ifdef DIMANALYSIS_EXAMPLEPARAMS_PROCESSMESSAGES
         std::cout << "... Succeded!\n";
+#endif
 
-//        cout << "\nQuantities that might need to be removed again:\n" << constrainingparams << endl;
+#ifdef DIMANALYSIS_EXAMPLEPARAMS_PROCESSMESSAGES
+       cout << "\nQuantities that might need to be removed again:\n" << constrainingparams << endl;
+#endif
         for (measure::iterator i = expprms.begin(); i!=expprms.end();) {
           if (cprms.has(i->caption)){
-//            cout << "Removing " << i->cptstr() << endl;
+#ifdef DIMANALYSIS_EXAMPLEPARAMS_PROCESSMESSAGES
+           cout << "Removing " << i->cptstr() << endl;
+#endif
             i=expprms.erase(i);             // remove those quantities that came
-//            cout << "which leaves:\n" << expprms << endl;
+#ifdef DIMANALYSIS_EXAMPLEPARAMS_PROCESSMESSAGES
+           cout << "which leaves:\n" << expprms << endl;
+#endif
           }           else                            //  from the constraining parameterset
-//            cout << "Has no " << i->cptstr() << endl;
+#ifdef DIMANALYSIS_EXAMPLEPARAMS_PROCESSMESSAGES
+           cout << "Has no " << i->cptstr() << endl;
+#endif
             ++i;
         }
-//        cout << "Result:\n" << expprms << endl;
+#ifdef DIMANALYSIS_EXAMPLEPARAMS_PROCESSMESSAGES
+       cout << "Result:\n" << expprms << endl;
+#endif
         return expprms;
       }catch(...){
+#ifdef DIMANALYSIS_EXAMPLEPARAMS_PROCESSMESSAGES
         std::cout << "... Failed!\n";
+#endif
         if (0==rand()%(15*phmsq_function::argdrfs.size()))
           ++optional_variables_combinations;
         if (0==rand()%(39*phmsq_function::argdrfs.size()))
@@ -1144,12 +1160,19 @@ if(0)cout<< "Calc multiplicity.\nAverage dist: " << avgd
                                                    //      solution to the minimization problem.
       for (unsigned i = 0; i<minmzstate.size(); ++i) {
         measure m = minmzstate;
+        if(msgstream) (*msgstream) << "Evolution-optimized measure:\n" << m;
+        if(msgstream) (*msgstream) << "To-miminize function has here value: " << f(m) << std::endl;
         bool toosmall;
+        unsigned killr=0;
         do {
           toosmall = false;
           int runintoconstraint=0;
+          if(msgstream) (*msgstream) << "Range expanded, now\n" << minmzstate << std::endl;
           for (int s=-1; s!=0; s=(s<0)? 1 : 0) {
             m[i] = minmzstate[i] + s*minmzstate[i].error();
+            if(msgstream) (*msgstream) << "One of the err margins:\n" << m;
+            if(msgstream) (*msgstream) << "with fn value " << f(m) << std::endl;
+            if(msgstream) (*msgstream) << "     (best achieved was " << bestachievmt << ")" << std::endl;
             if (!constrained(m)) {                   //that means there is no error-significant surrounding
               if (runintoconstraint++) return false;// to the prepared solution inside the allowed range 
              }else if (f(m) < bestachievmt*std::pow(2,1./minmzstate.size())) {
@@ -1157,6 +1180,10 @@ if(0)cout<< "Calc multiplicity.\nAverage dist: " << avgd
             }
           }
           minmzstate[i].scale_error(std::pow(2,.25/minmzstate.size()));
+          if(++killr > 10000) {
+            std::cerr << "Unable to find any error-significant surrounding to a result of evolution_minimizer (tried 10000 steps),\n even though there were no artificial constraints." << std::endl;
+            abort();
+          }
         } while(toosmall);
       }
     }
@@ -1277,6 +1304,7 @@ fittedFunction fit_phq_to_measureseq(
         , evolution_minimizer::solutioncertaintycriteria
                  sccrit=evolution_minimizer::solutioncertaintycriteria::doublevalue()  ) {
   fitdist_fntomeasures d(nftgt, nf, std::move(nreturndrf));
+  assert(nftgt.size() > d.example_parameterset().size());
   evolution_minimizer mnz(d, nc, sccrit);
   return fittedFunction(std::unique_ptr<fittable_phmsqfn>(nf.clone()), mnz.result());
 }
