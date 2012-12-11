@@ -1488,15 +1488,21 @@ physquantity plusminus(const physquantity &Errsrc){
 }
 
 struct errquantity : physquantity{
-  errquantity(const double &initvl): physquantity(initvl, real1){}
+  errquantity(double initvl): physquantity(initvl, real1){}
+  errquantity(const physquantity& initvl): physquantity(initvl){}
 };
 
-const errquantity lusminus(const double &errvl) {
+const errquantity lusminus(double errvl) {
   errquantity result=0;
   result.error(errvl*real1);
   return result;
 }
-const physquantity operator +(const double &left, const errquantity &right) {
+const errquantity lusminus(const physquantity& errvl) {
+  errquantity result=0;
+  result.error(errvl);
+  return result;
+}
+const physquantity operator +(double left, const errquantity &right) {
   return ((left * real1) + (physquantity) right);}
 
 
