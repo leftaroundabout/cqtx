@@ -40,6 +40,36 @@ namespace_cqtxnamespace_OPEN
   #define _4_FITVARIABLES(varn0, varn1, varn2, varn3) CREATE_FITVARIABLESALLOCATOR(4) \
     INTRODUCE_FITVARIABLE(0,varn0) INTRODUCE_FITVARIABLE(1,varn1) \
     INTRODUCE_FITVARIABLE(2,varn2) INTRODUCE_FITVARIABLE(3,varn3)
+  #define _5_FITVARIABLES(varn0, varn1, varn2, varn3, varn4) CREATE_FITVARIABLESALLOCATOR(5) \
+    INTRODUCE_FITVARIABLE(0,varn0) INTRODUCE_FITVARIABLE(1,varn1) \
+    INTRODUCE_FITVARIABLE(2,varn2) INTRODUCE_FITVARIABLE(3,varn3) \
+    INTRODUCE_FITVARIABLE(4,varn4)
+  #define _6_FITVARIABLES(varn0, varn1, varn2, varn3, varn4, varn5) CREATE_FITVARIABLESALLOCATOR(6) \
+    INTRODUCE_FITVARIABLE(0,varn0) INTRODUCE_FITVARIABLE(1,varn1) \
+    INTRODUCE_FITVARIABLE(2,varn2) INTRODUCE_FITVARIABLE(3,varn3) \
+    INTRODUCE_FITVARIABLE(4,varn4) INTRODUCE_FITVARIABLE(5,varn5)
+  #define _7_FITVARIABLES(varn0, varn1, varn2, varn3, varn4, varn5, varn6) CREATE_FITVARIABLESALLOCATOR(7) \
+    INTRODUCE_FITVARIABLE(0,varn0) INTRODUCE_FITVARIABLE(1,varn1) \
+    INTRODUCE_FITVARIABLE(2,varn2) INTRODUCE_FITVARIABLE(3,varn3) \
+    INTRODUCE_FITVARIABLE(4,varn4) INTRODUCE_FITVARIABLE(5,varn5) \
+    INTRODUCE_FITVARIABLE(6,varn6)
+  #define _8_FITVARIABLES(varn0, varn1, varn2, varn3, varn4, varn5, varn6, varn7) CREATE_FITVARIABLESALLOCATOR(8) \
+    INTRODUCE_FITVARIABLE(0,varn0) INTRODUCE_FITVARIABLE(1,varn1) \
+    INTRODUCE_FITVARIABLE(2,varn2) INTRODUCE_FITVARIABLE(3,varn3) \
+    INTRODUCE_FITVARIABLE(4,varn4) INTRODUCE_FITVARIABLE(5,varn5) \
+    INTRODUCE_FITVARIABLE(6,varn6) INTRODUCE_FITVARIABLE(7,varn7)
+  #define _9_FITVARIABLES(varn0, varn1, varn2, varn3, varn4, varn5, varn6, varn7, varn8) CREATE_FITVARIABLESALLOCATOR(9) \
+    INTRODUCE_FITVARIABLE(0,varn0) INTRODUCE_FITVARIABLE(1,varn1) \
+    INTRODUCE_FITVARIABLE(2,varn2) INTRODUCE_FITVARIABLE(3,varn3) \
+    INTRODUCE_FITVARIABLE(4,varn4) INTRODUCE_FITVARIABLE(5,varn5) \
+    INTRODUCE_FITVARIABLE(6,varn6) INTRODUCE_FITVARIABLE(7,varn7) \
+    INTRODUCE_FITVARIABLE(8,varn8)
+  #define _10_FITVARIABLES(varn0, varn1, varn2, varn3, varn4, varn5, varn6, varn7, varn8, varn9) CREATE_FITVARIABLESALLOCATOR(10) \
+    INTRODUCE_FITVARIABLE(0,varn0) INTRODUCE_FITVARIABLE(1,varn1) \
+    INTRODUCE_FITVARIABLE(2,varn2) INTRODUCE_FITVARIABLE(3,varn3) \
+    INTRODUCE_FITVARIABLE(4,varn4) INTRODUCE_FITVARIABLE(5,varn5) \
+    INTRODUCE_FITVARIABLE(6,varn6) INTRODUCE_FITVARIABLE(7,varn7) \
+    INTRODUCE_FITVARIABLE(8,varn8) INTRODUCE_FITVARIABLE(9,varn9)
   const unsigned multifitvariables_spacing = 0;
   #define NMULTIFITVARIABLES(n) static const unsigned multifitvariables_spacing = n;
 
@@ -85,6 +115,46 @@ namespace_cqtxnamespace_OPEN
     , cptof_##vc1(vn1); cptof_##vc2(vn2);                       \
       cptof_##vc3(vn3); cptof_##vc4(vn4);                       \
     , fndefinition                                              \
+  )
+  #define FITTINGFUNCTION__5_VARIABLES(                                 \
+        fncapt,vc1,vn1,vc2,vn2,vc3,vn3,vc4,vn4,vc5,vn5,fndefinition)    \
+  NORMAL_FITTINGFUNCTION( fncapt                                        \
+    , _5_FITVARIABLES(vc1, vc2, vc3, vc4, vc5)                          \
+    , cptof_##vc1(vn1); cptof_##vc2(vn2);                               \
+      cptof_##vc3(vn3); cptof_##vc4(vn4); cptof_##vc5(vn5);             \
+    , fndefinition                                                      \
+  )
+  #define FITTINGFUNCTION__6_VARIABLES(                                         \
+        fncapt,vc1,vn1,vc2,vn2,vc3,vn3,vc4,vn4,vc5,vn5,vc6,vn6,fndefinition)    \
+  NORMAL_FITTINGFUNCTION( fncapt                                                \
+    , _6_FITVARIABLES(vc1, vc2, vc3, vc4, vc5, vc6)                             \
+    , cptof_##vc1(vn1); cptof_##vc2(vn2); cptof_##vc3(vn3);                     \
+      cptof_##vc4(vn4); cptof_##vc5(vn5); cptof_##vc6(vn6);                     \
+    , fndefinition                                                              \
+  )
+  #define FITTINGFUNCTION__7_VARIABLES(                                                 \
+        fncapt,vc1,vn1,vc2,vn2,vc3,vn3,vc4,vn4,vc5,vn5,vc6,vn6,vc7,vn7,fndefinition)    \
+  NORMAL_FITTINGFUNCTION( fncapt                                                        \
+    , _7_FITVARIABLES(vc1, vc2, vc3, vc4, vc5, vc6, vc7)                                \
+    , cptof_##vc1(vn1); cptof_##vc2(vn2); cptof_##vc3(vn3);                             \
+      cptof_##vc4(vn4); cptof_##vc5(vn5); cptof_##vc6(vn6); cptof_##vc7(vn7);           \
+    , fndefinition                                                                      \
+  )
+  #define FITTINGFUNCTION__8_VARIABLES(                                                         \
+        fncapt,vc1,vn1,vc2,vn2,vc3,vn3,vc4,vn4,vc5,vn5,vc6,vn6,vc7,vn7,vc8,vn8,fndefinition)    \
+  NORMAL_FITTINGFUNCTION( fncapt                                                                \
+    , _7_FITVARIABLES(vc1, vc2, vc3, vc4, vc5, vc6, vc7, vc8)                                   \
+    , cptof_##vc1(vn1); cptof_##vc2(vn2); cptof_##vc3(vn3); cptof_##vc4(vn4);                   \
+      cptof_##vc5(vn5); cptof_##vc6(vn6); cptof_##vc7(vn7); cptof_##vc8(vn8);                   \
+    , fndefinition                                                                              \
+  )
+  #define FITTINGFUNCTION__9_VARIABLES(                                                                 \
+        fncapt,vc1,vn1,vc2,vn2,vc3,vn3,vc4,vn4,vc5,vn5,vc6,vn6,vc7,vn7,vc8,vn8,vc9,vn9,fndefinition)    \
+  NORMAL_FITTINGFUNCTION( fncapt                                                                        \
+    , _7_FITVARIABLES(vc1, vc2, vc3, vc4, vc5, vc6, vc7, vc8, vc9)                                      \
+    , cptof_##vc1(vn1); cptof_##vc2(vn2); cptof_##vc3(vn3); cptof_##vc4(vn4);                           \
+      cptof_##vc5(vn5); cptof_##vc6(vn6); cptof_##vc7(vn7); cptof_##vc8(vn8); cptof_##vc9(vn9);         \
+    , fndefinition                                                                                      \
   )
 
 
