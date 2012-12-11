@@ -1,4 +1,4 @@
-all: bin/phqdumpview bin/qdafilecleanup lib/squdistaccel.o lib/squdistaccel-fns.o
+all: hs-gend/fitfncmacros-0.h bin/phqdumpview bin/qdafilecleanup lib/squdistaccel.o lib/squdistaccel-fns.o
 
 install: all
 	cp bin/phqdumpview /usr/local/bin
@@ -23,6 +23,13 @@ libraryflags = -L/usr/local/cuda/lib64 -lcublas -lcusparse -L/usr/local/cula/lib
 
 CC = gcc $(profileflag)
 
+HSR = runhaskell
+
+hs-gend/fitfncmacros-*.h: fitfncmacros.h
+# 	there's a bug in ghc's `unlit` at the moment, it chokes at c preprocessor directives. Quick workaround:
+	sed 's/\(^ *\)#/\1%/g' hs-gend/fitfncmacros.lhs > /tmp/fitfncmacros.lhs
+# 	$(HSR) hs-gend/fitfncmacros.lhs
+	$(HSR) /tmp/fitfncmacros.lhs
 
 bin/phqdumpview: apps/phqdumpview.cpp *.cpp
 	$(CPPC) -o $@ $< $(CPPCFlags)
