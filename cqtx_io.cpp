@@ -588,7 +588,7 @@ auto miniTeX_superscript(char c) -> std::string {
                                // for the lack of a proper superscript solidus
    default: return std::string(1,c);
   }
-};
+}
 auto miniTeX_subscript(char c) -> std::string {
   switch (c) {
    case '0': return u8"\u2080";
@@ -617,7 +617,38 @@ auto miniTeX_subscript(char c) -> std::string {
    case 'x': return u8"\u2093";
    default: return std::string(1,c);
   }
-};
+}
+auto miniTeX_hat(char c) -> std::string {
+  switch (c) {
+   case 'a': return u8"\u00e2";
+   case 'c': return u8"\u0109";
+   case 'e': return u8"\u00ea";
+   case 'g': return u8"\u011d";
+   case 'h': return u8"\u0125";
+   case 'i': return u8"\u00ee";
+   case 'j': return u8"\u0135";
+   case 'o': return u8"\u00f4";
+   case 's': return u8"\u015d";
+   case 'u': return u8"\u00fb";
+   case 'w': return u8"\u0175";
+   case 'y': return u8"\u0177";
+   case 'z': return u8"\u1e91";
+   case 'A': return u8"\u00c2";
+   case 'C': return u8"\u0108";
+   case 'E': return u8"\u00ca";
+   case 'G': return u8"\u011c";
+   case 'H': return u8"\u0124";
+   case 'I': return u8"\u00ce";
+   case 'J': return u8"\u0134";
+   case 'O': return u8"\u00d4";
+   case 'S': return u8"\u015c";
+   case 'U': return u8"\u00db";
+   case 'W': return u8"\u0174";
+   case 'Y': return u8"\u0176";
+   case 'Z': return u8"\u1e90";
+   default: return std::string(1,c);
+  }
+}
 
 
 auto miniTeX(const std::string& str) -> std::string {
@@ -694,6 +725,14 @@ auto miniTeX(const std::string& str) -> std::string {
        }else if(str.substr(i,5)=="omega"){
         TeXd << u8"\u03c9";   i+=4;
         
+       }else if(str.substr(i,4)=="hat{"){
+        i+=4;
+        for(unsigned brlyr=1; brlyr>0; ++i) {
+          if(str[i]=='{') ++brlyr;
+           else if(str[i]=='}') --brlyr;
+           else TeXd << miniTeX_hat(str[i]);
+        }
+        --i;
        }else if(str.substr(i,7)=="mathrm{"){
         i+=7;
         for(unsigned brlyr=1; brlyr>0; ++i) {
