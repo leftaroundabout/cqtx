@@ -161,11 +161,12 @@ std::ostream &operator<<(std::ostream &tgt, const LaTeXvarnameslist &l) {
 }
 
 
-template<typename SubscriptT>
-maybe<SubscriptT> try_splitoff_subscript(std::string &LaTeXmathexpr) {
-  SubscriptT subscript;
+template<typename SepscriptT> auto 
+try_splitoff_sepdLaTeXstring(std::string &LaTeXmathexpr, char seperator)
+                                     -> maybe<SepscriptT> {
+  SepscriptT subscript;
   typedef std::string::size_type idx;
-  idx underscorepos = LaTeXmathexpr.rfind('_');
+  idx underscorepos = LaTeXmathexpr.rfind(seperator);
   if (underscorepos == std::string::npos) return nothing;
   std::string subsc = LaTeXmathexpr.substr(underscorepos + 1);
   if (subsc.size()==0) return nothing;
@@ -180,10 +181,27 @@ maybe<SubscriptT> try_splitoff_subscript(std::string &LaTeXmathexpr) {
 }
 
 template<typename SubscriptT>
+maybe<SubscriptT> try_splitoff_subscript(std::string &LaTeXmathexpr) {
+  return try_splitoff_sepdLaTeXstring(LaTeXmathexpr, '_');
+}
+template<typename SupscriptT>
+maybe<SupscriptT> try_splitoff_superscript(std::string &LaTeXmathexpr) {
+  return try_splitoff_sepdLaTeXstring(LaTeXmathexpr, '^');
+}
+
+template<typename SubscriptT>
 SubscriptT splitoff_subscript(std::string &LaTeXmathexpr) {
   for (auto res : try_splitoff_subscript<SubscriptT>(LaTeXmathexpr))
     return res;
   std::cerr << "Tried to split off subscript from expression \""
+            << LaTeXmathexpr << "\" (impossible).\n";
+  abort();
+}
+template<typename SupscriptT>
+SupscriptT splitoff_superscript(std::string &LaTeXmathexpr) {
+  for (auto res : try_splitoff_superscript<SupscriptT>(LaTeXmathexpr))
+    return res;
+  std::cerr << "Tried to split off superscript from expression \""
             << LaTeXmathexpr << "\" (impossible).\n";
   abort();
 }
