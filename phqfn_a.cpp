@@ -1180,8 +1180,8 @@ if(0)cout<< "Calc multiplicity.\nAverage dist: " << avgd
             }
           }
           minmzstate[i].scale_error(std::pow(2,.25/minmzstate.size()));
-          if(++killr > 10000) {
-            std::cerr << "Unable to find any error-significant surrounding to a result of evolution_minimizer (tried 10000 steps),\n even though there were no artificial constraints." << std::endl;
+          if(++killr > 100000) {
+            std::cerr << "Unable to find any error-significant surrounding to a result of evolution_minimizer\n (tried 100000 steps), even though there were no artificial constraints." << std::endl;
             abort();
           }
         } while(toosmall);
