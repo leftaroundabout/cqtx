@@ -1104,7 +1104,8 @@ if(0)cout<< "Calc multiplicity.\nAverage dist: " << avgd
    //     cout << "staterandomizer(): \n" << staterandomizer() << endl;
         measure m;
         do {
-          m = sched.front().t.by_i_plus(staterandomizer());
+          auto mr = staterandomizer();
+          m = sched.front().t.by_i_plus(mr);
         }while (!constrained(m));
         minmzstate.by_i_statistically_approach(m, 1./aim_schedlength);
 
