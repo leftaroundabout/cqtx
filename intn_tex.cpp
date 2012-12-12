@@ -64,6 +64,7 @@ bool operator==(std::string l, const LaTeX_subscript &i) {
 }
 
 
+class LaTeXindex_itrange;
 class LaTeXindex_rangebegin;
 
 class LaTeXindex {
@@ -72,11 +73,12 @@ class LaTeXindex {
   LaTeXindex(int i) { std::stringstream s; s<<i; idstr=s.str(); }
   LaTeXindex(const std::string i): idstr(i) {}
   LaTeXindex_rangebegin from(int i) const;
+  template<typename IdxCnt>
+  LaTeXindex_itrange over(IdxCnt&& is) const;
   std::string &str() { return idstr; }
   const std::string &str() const { return idstr; }
 };
 
-class LaTeXindex_itrange;
 
 class LaTeXindex_rangebegin {
   LaTeXindex rngindex;
@@ -95,22 +97,30 @@ LaTeXindex_rangebegin LaTeXindex::from(int i) const{
 
 class LaTeXindex_itrange {
   LaTeXindex rngindex;
-  int rngbgn, rngend;
+  std::vector<int> range;
   friend class LaTeXindex;
  public:
-  LaTeXindex_itrange(const LaTeXindex &nrngi, int nb, int ne): rngindex(nrngi), rngbgn(nb), rngend(ne) {}
+  LaTeXindex_itrange(const LaTeXindex& nrngi, int nb, int ne)
+    : rngindex(nrngi) { for(;nb<ne; ++nb) range.push_back(nb); }
+  template<typename IdxCnt>
+  LaTeXindex_itrange(const LaTeXindex& nrngi, const IdxCnt& range)
+    : rngindex(nrngi), range(range.begin(), range.end()) {}
   LaTeXindex &index() { return rngindex; }
-  const LaTeXindex &index() const{ return rngindex; }
-  const int &begin() const{ return rngbgn; }
-  int &begin() { return rngbgn; }
-  const int &end() const{ return rngend; }
-  int &end() { return rngend; }
-  unsigned size() const{ return rngend - rngbgn; }
+  const LaTeXindex& index() const{ return rngindex; }
+  auto begin()const -> decltype(range.cbegin()) { return range.cbegin(); }
+  auto end()const -> decltype(range.cbegin()) { return range.cend(); }
+  unsigned size() const{ return range.size(); }
 };
 
 LaTeXindex_itrange LaTeXindex_rangebegin::unto(int i) const{
   return LaTeXindex_itrange(rngindex, rngbgn, i);
 }
+
+template<typename IdxCnt>
+LaTeXindex_itrange LaTeXindex::over(IdxCnt&& is) const{
+  return LaTeXindex_itrange(*this, std::forward<IdxCnt>(is));
+}
+
 
 
 class LaTeXvarnameslist : public std::list<std::string> {
@@ -133,7 +143,7 @@ class LaTeXvarnameslist : public std::list<std::string> {
     for (iterator i=begin(); i!=end();) {
       if ( i->size() > range.index().str().size()
          && i->substr(i->size()-range.index().str().size()-1) == LaTeX_subscript(range.index().str()) ) {
-        for(int j = range.begin(); j<range.end(); ++j) {
+        for(int j: range) {
           insert(i, i->substr(0, i->size()-range.index().str().size()-1) + LaTeX_subscript(j));
         }
         i=erase(i);
@@ -182,11 +192,11 @@ try_splitoff_sepdLaTeXstring(std::string &LaTeXmathexpr, char seperator)
 
 template<typename SubscriptT>
 maybe<SubscriptT> try_splitoff_subscript(std::string &LaTeXmathexpr) {
-  return try_splitoff_sepdLaTeXstring(LaTeXmathexpr, '_');
+  return try_splitoff_sepdLaTeXstring<SubscriptT>(LaTeXmathexpr, '_');
 }
 template<typename SupscriptT>
 maybe<SupscriptT> try_splitoff_superscript(std::string &LaTeXmathexpr) {
-  return try_splitoff_sepdLaTeXstring(LaTeXmathexpr, '^');
+  return try_splitoff_sepdLaTeXstring<SupscriptT>(LaTeXmathexpr, '^');
 }
 
 template<typename SubscriptT>
