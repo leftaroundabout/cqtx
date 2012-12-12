@@ -1160,7 +1160,7 @@ if(0)cout<< "Calc multiplicity.\nAverage dist: " << avgd
                                                     //     as a statistically significant
                                                    //      solution to the minimization problem.
       for (unsigned i = 0; i<minmzstate.size(); ++i) {
-        measure m = minmzstate;
+        measure m = minmzstate, backup=minmzstate;
         if(msgstream) (*msgstream) << "Evolution-optimized measure:\n" << m;
         if(msgstream) (*msgstream) << "To-miminize function has here value: " << f(m) << std::endl;
         bool toosmall;
@@ -1182,7 +1182,9 @@ if(0)cout<< "Calc multiplicity.\nAverage dist: " << avgd
           }
           minmzstate[i].scale_error(std::pow(2,.25/minmzstate.size()));
           if(++killr > 100000) {
-            std::cerr << "Unable to find any error-significant surrounding to a result of evolution_minimizer\n (tried 100000 steps), even though there were no artificial constraints." << std::endl;
+            std::cerr << "Unable to find any error-significant environment to a result of evolution_minimizer\n (tried 100000 steps), even though there were no artificial constraints." << std::endl;
+            std::cerr << " Result was\n" <<backup << "   by now expanded to\n"
+                      << minmzstate << std::endl;
             abort();
           }
         } while(toosmall);
