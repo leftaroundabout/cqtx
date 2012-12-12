@@ -166,12 +166,12 @@ namespace_cqtxnamespace_OPEN
           varsAssocList = lshow $ zipWith (\c n->c++","++n) varsCns varsNns
           varsCnList    = lshow varsCns
           initAssocList = unlines
-           [ "      if(nmultivars<"++show(n-i)++") {                        \n\
-             \        cptof_##vc"++show i++"(vn"++show i++");                \n\
-             \       }else{                                                  \n\
+           [ "      if(nmultivars>"++show(n-i)++") {                        \n\
              \        for(unsigned "++j++"=0;"++j++"<nmultiinsts; ++"++j++") \n\
              \          cptof_##vc"++show i++"("++j++", vn"++show i
                              ++" + LaTeX_subscript("++j++"));                \n\
+             \       }else{                                                  \n\
+             \        cptof_##vc"++show i++"(vn"++show i++");                \n\
              \      }"
            | i<-[1..n] ]
           lshow = concat . intersperse ","

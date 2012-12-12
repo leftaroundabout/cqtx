@@ -78,11 +78,11 @@
     NMULTIFITVARIABLES(nmultivars)                                                         \
    public:                                                                                 \
     caption(unsigned nmultiinsts) { allocate_fitvarsbuf(nmultiinsts);                      \
-      if(nmultivars<0) {                                                                   \
-        cptof_##vc1(vn1);                                                                  \
-       }else{                                                                              \
+      if(nmultivars>0) {                                                                   \
         for(unsigned junique_index=0;junique_index<nmultiinsts; ++junique_index)           \
           cptof_##vc1(junique_index, vn1 + LaTeX_subscript(junique_index));                \
+       }else{                                                                              \
+        cptof_##vc1(vn1);                                                                  \
       }                                                                                    \
     }                                                                                      \
     physquantity operator() (const measure &thisparams) const{                             \
@@ -99,17 +99,17 @@
     NMULTIFITVARIABLES(nmultivars)                                                         \
    public:                                                                                 \
     caption(unsigned nmultiinsts) { allocate_fitvarsbuf(nmultiinsts);                      \
-      if(nmultivars<1) {                                                                   \
-        cptof_##vc1(vn1);                                                                  \
-       }else{                                                                              \
+      if(nmultivars>1) {                                                                   \
         for(unsigned junique_index=0;junique_index<nmultiinsts; ++junique_index)           \
           cptof_##vc1(junique_index, vn1 + LaTeX_subscript(junique_index));                \
-      }                                                                                    \
-      if(nmultivars<0) {                                                                   \
-        cptof_##vc2(vn2);                                                                  \
        }else{                                                                              \
+        cptof_##vc1(vn1);                                                                  \
+      }                                                                                    \
+      if(nmultivars>0) {                                                                   \
         for(unsigned junique_index=0;junique_index<nmultiinsts; ++junique_index)           \
           cptof_##vc2(junique_index, vn2 + LaTeX_subscript(junique_index));                \
+       }else{                                                                              \
+        cptof_##vc2(vn2);                                                                  \
       }                                                                                    \
     }                                                                                      \
     physquantity operator() (const measure &thisparams) const{                             \
@@ -126,23 +126,23 @@
     NMULTIFITVARIABLES(nmultivars)                                                         \
    public:                                                                                 \
     caption(unsigned nmultiinsts) { allocate_fitvarsbuf(nmultiinsts);                      \
-      if(nmultivars<2) {                                                                   \
-        cptof_##vc1(vn1);                                                                  \
-       }else{                                                                              \
+      if(nmultivars>2) {                                                                   \
         for(unsigned junique_index=0;junique_index<nmultiinsts; ++junique_index)           \
           cptof_##vc1(junique_index, vn1 + LaTeX_subscript(junique_index));                \
-      }                                                                                    \
-      if(nmultivars<1) {                                                                   \
-        cptof_##vc2(vn2);                                                                  \
        }else{                                                                              \
+        cptof_##vc1(vn1);                                                                  \
+      }                                                                                    \
+      if(nmultivars>1) {                                                                   \
         for(unsigned junique_index=0;junique_index<nmultiinsts; ++junique_index)           \
           cptof_##vc2(junique_index, vn2 + LaTeX_subscript(junique_index));                \
-      }                                                                                    \
-      if(nmultivars<0) {                                                                   \
-        cptof_##vc3(vn3);                                                                  \
        }else{                                                                              \
+        cptof_##vc2(vn2);                                                                  \
+      }                                                                                    \
+      if(nmultivars>0) {                                                                   \
         for(unsigned junique_index=0;junique_index<nmultiinsts; ++junique_index)           \
           cptof_##vc3(junique_index, vn3 + LaTeX_subscript(junique_index));                \
+       }else{                                                                              \
+        cptof_##vc3(vn3);                                                                  \
       }                                                                                    \
     }                                                                                      \
     physquantity operator() (const measure &thisparams) const{                             \
@@ -159,29 +159,29 @@
     NMULTIFITVARIABLES(nmultivars)                                                         \
    public:                                                                                 \
     caption(unsigned nmultiinsts) { allocate_fitvarsbuf(nmultiinsts);                      \
-      if(nmultivars<3) {                                                                   \
-        cptof_##vc1(vn1);                                                                  \
-       }else{                                                                              \
+      if(nmultivars>3) {                                                                   \
         for(unsigned junique_index=0;junique_index<nmultiinsts; ++junique_index)           \
           cptof_##vc1(junique_index, vn1 + LaTeX_subscript(junique_index));                \
-      }                                                                                    \
-      if(nmultivars<2) {                                                                   \
-        cptof_##vc2(vn2);                                                                  \
        }else{                                                                              \
+        cptof_##vc1(vn1);                                                                  \
+      }                                                                                    \
+      if(nmultivars>2) {                                                                   \
         for(unsigned junique_index=0;junique_index<nmultiinsts; ++junique_index)           \
           cptof_##vc2(junique_index, vn2 + LaTeX_subscript(junique_index));                \
-      }                                                                                    \
-      if(nmultivars<1) {                                                                   \
-        cptof_##vc3(vn3);                                                                  \
        }else{                                                                              \
+        cptof_##vc2(vn2);                                                                  \
+      }                                                                                    \
+      if(nmultivars>1) {                                                                   \
         for(unsigned junique_index=0;junique_index<nmultiinsts; ++junique_index)           \
           cptof_##vc3(junique_index, vn3 + LaTeX_subscript(junique_index));                \
-      }                                                                                    \
-      if(nmultivars<0) {                                                                   \
-        cptof_##vc4(vn4);                                                                  \
        }else{                                                                              \
+        cptof_##vc3(vn3);                                                                  \
+      }                                                                                    \
+      if(nmultivars>0) {                                                                   \
         for(unsigned junique_index=0;junique_index<nmultiinsts; ++junique_index)           \
           cptof_##vc4(junique_index, vn4 + LaTeX_subscript(junique_index));                \
+       }else{                                                                              \
+        cptof_##vc4(vn4);                                                                  \
       }                                                                                    \
     }                                                                                      \
     physquantity operator() (const measure &thisparams) const{                             \
@@ -198,35 +198,35 @@
     NMULTIFITVARIABLES(nmultivars)                                                                \
    public:                                                                                        \
     caption(unsigned nmultiinsts) { allocate_fitvarsbuf(nmultiinsts);                             \
-      if(nmultivars<4) {                                                                          \
-        cptof_##vc1(vn1);                                                                         \
-       }else{                                                                                     \
+      if(nmultivars>4) {                                                                          \
         for(unsigned junique_index=0;junique_index<nmultiinsts; ++junique_index)                  \
           cptof_##vc1(junique_index, vn1 + LaTeX_subscript(junique_index));                       \
-      }                                                                                           \
-      if(nmultivars<3) {                                                                          \
-        cptof_##vc2(vn2);                                                                         \
        }else{                                                                                     \
+        cptof_##vc1(vn1);                                                                         \
+      }                                                                                           \
+      if(nmultivars>3) {                                                                          \
         for(unsigned junique_index=0;junique_index<nmultiinsts; ++junique_index)                  \
           cptof_##vc2(junique_index, vn2 + LaTeX_subscript(junique_index));                       \
-      }                                                                                           \
-      if(nmultivars<2) {                                                                          \
-        cptof_##vc3(vn3);                                                                         \
        }else{                                                                                     \
+        cptof_##vc2(vn2);                                                                         \
+      }                                                                                           \
+      if(nmultivars>2) {                                                                          \
         for(unsigned junique_index=0;junique_index<nmultiinsts; ++junique_index)                  \
           cptof_##vc3(junique_index, vn3 + LaTeX_subscript(junique_index));                       \
-      }                                                                                           \
-      if(nmultivars<1) {                                                                          \
-        cptof_##vc4(vn4);                                                                         \
        }else{                                                                                     \
+        cptof_##vc3(vn3);                                                                         \
+      }                                                                                           \
+      if(nmultivars>1) {                                                                          \
         for(unsigned junique_index=0;junique_index<nmultiinsts; ++junique_index)                  \
           cptof_##vc4(junique_index, vn4 + LaTeX_subscript(junique_index));                       \
-      }                                                                                           \
-      if(nmultivars<0) {                                                                          \
-        cptof_##vc5(vn5);                                                                         \
        }else{                                                                                     \
+        cptof_##vc4(vn4);                                                                         \
+      }                                                                                           \
+      if(nmultivars>0) {                                                                          \
         for(unsigned junique_index=0;junique_index<nmultiinsts; ++junique_index)                  \
           cptof_##vc5(junique_index, vn5 + LaTeX_subscript(junique_index));                       \
+       }else{                                                                                     \
+        cptof_##vc5(vn5);                                                                         \
       }                                                                                           \
     }                                                                                             \
     physquantity operator() (const measure &thisparams) const{                                    \
@@ -243,41 +243,41 @@
     NMULTIFITVARIABLES(nmultivars)                                                                        \
    public:                                                                                                \
     caption(unsigned nmultiinsts) { allocate_fitvarsbuf(nmultiinsts);                                     \
-      if(nmultivars<5) {                                                                                  \
-        cptof_##vc1(vn1);                                                                                 \
-       }else{                                                                                             \
+      if(nmultivars>5) {                                                                                  \
         for(unsigned junique_index=0;junique_index<nmultiinsts; ++junique_index)                          \
           cptof_##vc1(junique_index, vn1 + LaTeX_subscript(junique_index));                               \
-      }                                                                                                   \
-      if(nmultivars<4) {                                                                                  \
-        cptof_##vc2(vn2);                                                                                 \
        }else{                                                                                             \
+        cptof_##vc1(vn1);                                                                                 \
+      }                                                                                                   \
+      if(nmultivars>4) {                                                                                  \
         for(unsigned junique_index=0;junique_index<nmultiinsts; ++junique_index)                          \
           cptof_##vc2(junique_index, vn2 + LaTeX_subscript(junique_index));                               \
-      }                                                                                                   \
-      if(nmultivars<3) {                                                                                  \
-        cptof_##vc3(vn3);                                                                                 \
        }else{                                                                                             \
+        cptof_##vc2(vn2);                                                                                 \
+      }                                                                                                   \
+      if(nmultivars>3) {                                                                                  \
         for(unsigned junique_index=0;junique_index<nmultiinsts; ++junique_index)                          \
           cptof_##vc3(junique_index, vn3 + LaTeX_subscript(junique_index));                               \
-      }                                                                                                   \
-      if(nmultivars<2) {                                                                                  \
-        cptof_##vc4(vn4);                                                                                 \
        }else{                                                                                             \
+        cptof_##vc3(vn3);                                                                                 \
+      }                                                                                                   \
+      if(nmultivars>2) {                                                                                  \
         for(unsigned junique_index=0;junique_index<nmultiinsts; ++junique_index)                          \
           cptof_##vc4(junique_index, vn4 + LaTeX_subscript(junique_index));                               \
-      }                                                                                                   \
-      if(nmultivars<1) {                                                                                  \
-        cptof_##vc5(vn5);                                                                                 \
        }else{                                                                                             \
+        cptof_##vc4(vn4);                                                                                 \
+      }                                                                                                   \
+      if(nmultivars>1) {                                                                                  \
         for(unsigned junique_index=0;junique_index<nmultiinsts; ++junique_index)                          \
           cptof_##vc5(junique_index, vn5 + LaTeX_subscript(junique_index));                               \
-      }                                                                                                   \
-      if(nmultivars<0) {                                                                                  \
-        cptof_##vc6(vn6);                                                                                 \
        }else{                                                                                             \
+        cptof_##vc5(vn5);                                                                                 \
+      }                                                                                                   \
+      if(nmultivars>0) {                                                                                  \
         for(unsigned junique_index=0;junique_index<nmultiinsts; ++junique_index)                          \
           cptof_##vc6(junique_index, vn6 + LaTeX_subscript(junique_index));                               \
+       }else{                                                                                             \
+        cptof_##vc6(vn6);                                                                                 \
       }                                                                                                   \
     }                                                                                                     \
     physquantity operator() (const measure &thisparams) const{                                            \
@@ -294,47 +294,47 @@
     NMULTIFITVARIABLES(nmultivars)                                                                                \
    public:                                                                                                        \
     caption(unsigned nmultiinsts) { allocate_fitvarsbuf(nmultiinsts);                                             \
-      if(nmultivars<6) {                                                                                          \
-        cptof_##vc1(vn1);                                                                                         \
-       }else{                                                                                                     \
+      if(nmultivars>6) {                                                                                          \
         for(unsigned junique_index=0;junique_index<nmultiinsts; ++junique_index)                                  \
           cptof_##vc1(junique_index, vn1 + LaTeX_subscript(junique_index));                                       \
-      }                                                                                                           \
-      if(nmultivars<5) {                                                                                          \
-        cptof_##vc2(vn2);                                                                                         \
        }else{                                                                                                     \
+        cptof_##vc1(vn1);                                                                                         \
+      }                                                                                                           \
+      if(nmultivars>5) {                                                                                          \
         for(unsigned junique_index=0;junique_index<nmultiinsts; ++junique_index)                                  \
           cptof_##vc2(junique_index, vn2 + LaTeX_subscript(junique_index));                                       \
-      }                                                                                                           \
-      if(nmultivars<4) {                                                                                          \
-        cptof_##vc3(vn3);                                                                                         \
        }else{                                                                                                     \
+        cptof_##vc2(vn2);                                                                                         \
+      }                                                                                                           \
+      if(nmultivars>4) {                                                                                          \
         for(unsigned junique_index=0;junique_index<nmultiinsts; ++junique_index)                                  \
           cptof_##vc3(junique_index, vn3 + LaTeX_subscript(junique_index));                                       \
-      }                                                                                                           \
-      if(nmultivars<3) {                                                                                          \
-        cptof_##vc4(vn4);                                                                                         \
        }else{                                                                                                     \
+        cptof_##vc3(vn3);                                                                                         \
+      }                                                                                                           \
+      if(nmultivars>3) {                                                                                          \
         for(unsigned junique_index=0;junique_index<nmultiinsts; ++junique_index)                                  \
           cptof_##vc4(junique_index, vn4 + LaTeX_subscript(junique_index));                                       \
-      }                                                                                                           \
-      if(nmultivars<2) {                                                                                          \
-        cptof_##vc5(vn5);                                                                                         \
        }else{                                                                                                     \
+        cptof_##vc4(vn4);                                                                                         \
+      }                                                                                                           \
+      if(nmultivars>2) {                                                                                          \
         for(unsigned junique_index=0;junique_index<nmultiinsts; ++junique_index)                                  \
           cptof_##vc5(junique_index, vn5 + LaTeX_subscript(junique_index));                                       \
-      }                                                                                                           \
-      if(nmultivars<1) {                                                                                          \
-        cptof_##vc6(vn6);                                                                                         \
        }else{                                                                                                     \
+        cptof_##vc5(vn5);                                                                                         \
+      }                                                                                                           \
+      if(nmultivars>1) {                                                                                          \
         for(unsigned junique_index=0;junique_index<nmultiinsts; ++junique_index)                                  \
           cptof_##vc6(junique_index, vn6 + LaTeX_subscript(junique_index));                                       \
-      }                                                                                                           \
-      if(nmultivars<0) {                                                                                          \
-        cptof_##vc7(vn7);                                                                                         \
        }else{                                                                                                     \
+        cptof_##vc6(vn6);                                                                                         \
+      }                                                                                                           \
+      if(nmultivars>0) {                                                                                          \
         for(unsigned junique_index=0;junique_index<nmultiinsts; ++junique_index)                                  \
           cptof_##vc7(junique_index, vn7 + LaTeX_subscript(junique_index));                                       \
+       }else{                                                                                                     \
+        cptof_##vc7(vn7);                                                                                         \
       }                                                                                                           \
     }                                                                                                             \
     physquantity operator() (const measure &thisparams) const{                                                    \
@@ -351,53 +351,53 @@
     NMULTIFITVARIABLES(nmultivars)                                                                                        \
    public:                                                                                                                \
     caption(unsigned nmultiinsts) { allocate_fitvarsbuf(nmultiinsts);                                                     \
-      if(nmultivars<7) {                                                                                                  \
-        cptof_##vc1(vn1);                                                                                                 \
-       }else{                                                                                                             \
+      if(nmultivars>7) {                                                                                                  \
         for(unsigned junique_index=0;junique_index<nmultiinsts; ++junique_index)                                          \
           cptof_##vc1(junique_index, vn1 + LaTeX_subscript(junique_index));                                               \
-      }                                                                                                                   \
-      if(nmultivars<6) {                                                                                                  \
-        cptof_##vc2(vn2);                                                                                                 \
        }else{                                                                                                             \
+        cptof_##vc1(vn1);                                                                                                 \
+      }                                                                                                                   \
+      if(nmultivars>6) {                                                                                                  \
         for(unsigned junique_index=0;junique_index<nmultiinsts; ++junique_index)                                          \
           cptof_##vc2(junique_index, vn2 + LaTeX_subscript(junique_index));                                               \
-      }                                                                                                                   \
-      if(nmultivars<5) {                                                                                                  \
-        cptof_##vc3(vn3);                                                                                                 \
        }else{                                                                                                             \
+        cptof_##vc2(vn2);                                                                                                 \
+      }                                                                                                                   \
+      if(nmultivars>5) {                                                                                                  \
         for(unsigned junique_index=0;junique_index<nmultiinsts; ++junique_index)                                          \
           cptof_##vc3(junique_index, vn3 + LaTeX_subscript(junique_index));                                               \
-      }                                                                                                                   \
-      if(nmultivars<4) {                                                                                                  \
-        cptof_##vc4(vn4);                                                                                                 \
        }else{                                                                                                             \
+        cptof_##vc3(vn3);                                                                                                 \
+      }                                                                                                                   \
+      if(nmultivars>4) {                                                                                                  \
         for(unsigned junique_index=0;junique_index<nmultiinsts; ++junique_index)                                          \
           cptof_##vc4(junique_index, vn4 + LaTeX_subscript(junique_index));                                               \
-      }                                                                                                                   \
-      if(nmultivars<3) {                                                                                                  \
-        cptof_##vc5(vn5);                                                                                                 \
        }else{                                                                                                             \
+        cptof_##vc4(vn4);                                                                                                 \
+      }                                                                                                                   \
+      if(nmultivars>3) {                                                                                                  \
         for(unsigned junique_index=0;junique_index<nmultiinsts; ++junique_index)                                          \
           cptof_##vc5(junique_index, vn5 + LaTeX_subscript(junique_index));                                               \
-      }                                                                                                                   \
-      if(nmultivars<2) {                                                                                                  \
-        cptof_##vc6(vn6);                                                                                                 \
        }else{                                                                                                             \
+        cptof_##vc5(vn5);                                                                                                 \
+      }                                                                                                                   \
+      if(nmultivars>2) {                                                                                                  \
         for(unsigned junique_index=0;junique_index<nmultiinsts; ++junique_index)                                          \
           cptof_##vc6(junique_index, vn6 + LaTeX_subscript(junique_index));                                               \
-      }                                                                                                                   \
-      if(nmultivars<1) {                                                                                                  \
-        cptof_##vc7(vn7);                                                                                                 \
        }else{                                                                                                             \
+        cptof_##vc6(vn6);                                                                                                 \
+      }                                                                                                                   \
+      if(nmultivars>1) {                                                                                                  \
         for(unsigned junique_index=0;junique_index<nmultiinsts; ++junique_index)                                          \
           cptof_##vc7(junique_index, vn7 + LaTeX_subscript(junique_index));                                               \
-      }                                                                                                                   \
-      if(nmultivars<0) {                                                                                                  \
-        cptof_##vc8(vn8);                                                                                                 \
        }else{                                                                                                             \
+        cptof_##vc7(vn7);                                                                                                 \
+      }                                                                                                                   \
+      if(nmultivars>0) {                                                                                                  \
         for(unsigned junique_index=0;junique_index<nmultiinsts; ++junique_index)                                          \
           cptof_##vc8(junique_index, vn8 + LaTeX_subscript(junique_index));                                               \
+       }else{                                                                                                             \
+        cptof_##vc8(vn8);                                                                                                 \
       }                                                                                                                   \
     }                                                                                                                     \
     physquantity operator() (const measure &thisparams) const{                                                            \
@@ -414,59 +414,59 @@
     NMULTIFITVARIABLES(nmultivars)                                                                                                \
    public:                                                                                                                        \
     caption(unsigned nmultiinsts) { allocate_fitvarsbuf(nmultiinsts);                                                             \
-      if(nmultivars<8) {                                                                                                          \
-        cptof_##vc1(vn1);                                                                                                         \
-       }else{                                                                                                                     \
+      if(nmultivars>8) {                                                                                                          \
         for(unsigned junique_index=0;junique_index<nmultiinsts; ++junique_index)                                                  \
           cptof_##vc1(junique_index, vn1 + LaTeX_subscript(junique_index));                                                       \
-      }                                                                                                                           \
-      if(nmultivars<7) {                                                                                                          \
-        cptof_##vc2(vn2);                                                                                                         \
        }else{                                                                                                                     \
+        cptof_##vc1(vn1);                                                                                                         \
+      }                                                                                                                           \
+      if(nmultivars>7) {                                                                                                          \
         for(unsigned junique_index=0;junique_index<nmultiinsts; ++junique_index)                                                  \
           cptof_##vc2(junique_index, vn2 + LaTeX_subscript(junique_index));                                                       \
-      }                                                                                                                           \
-      if(nmultivars<6) {                                                                                                          \
-        cptof_##vc3(vn3);                                                                                                         \
        }else{                                                                                                                     \
+        cptof_##vc2(vn2);                                                                                                         \
+      }                                                                                                                           \
+      if(nmultivars>6) {                                                                                                          \
         for(unsigned junique_index=0;junique_index<nmultiinsts; ++junique_index)                                                  \
           cptof_##vc3(junique_index, vn3 + LaTeX_subscript(junique_index));                                                       \
-      }                                                                                                                           \
-      if(nmultivars<5) {                                                                                                          \
-        cptof_##vc4(vn4);                                                                                                         \
        }else{                                                                                                                     \
+        cptof_##vc3(vn3);                                                                                                         \
+      }                                                                                                                           \
+      if(nmultivars>5) {                                                                                                          \
         for(unsigned junique_index=0;junique_index<nmultiinsts; ++junique_index)                                                  \
           cptof_##vc4(junique_index, vn4 + LaTeX_subscript(junique_index));                                                       \
-      }                                                                                                                           \
-      if(nmultivars<4) {                                                                                                          \
-        cptof_##vc5(vn5);                                                                                                         \
        }else{                                                                                                                     \
+        cptof_##vc4(vn4);                                                                                                         \
+      }                                                                                                                           \
+      if(nmultivars>4) {                                                                                                          \
         for(unsigned junique_index=0;junique_index<nmultiinsts; ++junique_index)                                                  \
           cptof_##vc5(junique_index, vn5 + LaTeX_subscript(junique_index));                                                       \
-      }                                                                                                                           \
-      if(nmultivars<3) {                                                                                                          \
-        cptof_##vc6(vn6);                                                                                                         \
        }else{                                                                                                                     \
+        cptof_##vc5(vn5);                                                                                                         \
+      }                                                                                                                           \
+      if(nmultivars>3) {                                                                                                          \
         for(unsigned junique_index=0;junique_index<nmultiinsts; ++junique_index)                                                  \
           cptof_##vc6(junique_index, vn6 + LaTeX_subscript(junique_index));                                                       \
-      }                                                                                                                           \
-      if(nmultivars<2) {                                                                                                          \
-        cptof_##vc7(vn7);                                                                                                         \
        }else{                                                                                                                     \
+        cptof_##vc6(vn6);                                                                                                         \
+      }                                                                                                                           \
+      if(nmultivars>2) {                                                                                                          \
         for(unsigned junique_index=0;junique_index<nmultiinsts; ++junique_index)                                                  \
           cptof_##vc7(junique_index, vn7 + LaTeX_subscript(junique_index));                                                       \
-      }                                                                                                                           \
-      if(nmultivars<1) {                                                                                                          \
-        cptof_##vc8(vn8);                                                                                                         \
        }else{                                                                                                                     \
+        cptof_##vc7(vn7);                                                                                                         \
+      }                                                                                                                           \
+      if(nmultivars>1) {                                                                                                          \
         for(unsigned junique_index=0;junique_index<nmultiinsts; ++junique_index)                                                  \
           cptof_##vc8(junique_index, vn8 + LaTeX_subscript(junique_index));                                                       \
-      }                                                                                                                           \
-      if(nmultivars<0) {                                                                                                          \
-        cptof_##vc9(vn9);                                                                                                         \
        }else{                                                                                                                     \
+        cptof_##vc8(vn8);                                                                                                         \
+      }                                                                                                                           \
+      if(nmultivars>0) {                                                                                                          \
         for(unsigned junique_index=0;junique_index<nmultiinsts; ++junique_index)                                                  \
           cptof_##vc9(junique_index, vn9 + LaTeX_subscript(junique_index));                                                       \
+       }else{                                                                                                                     \
+        cptof_##vc9(vn9);                                                                                                         \
       }                                                                                                                           \
     }                                                                                                                             \
     physquantity operator() (const measure &thisparams) const{                                                                    \
