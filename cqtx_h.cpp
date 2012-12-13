@@ -199,6 +199,8 @@ namespace stdPhysUnitsandConsts {
    ,         picometers = newUnit(  meters * 1e-12,                        "pm"  )
    ,        megaparsecs = newUnit(  3.085677581e+25 * millimeters,        "Mpc"  , &exoticunits)
    ,          angstroms = newUnit(  1e-10 * meters,                "\\Angstrom"  )
+   ,       squaremeters = newUnit(  meters.to(2),                         "m^2"  )
+   ,  squarecentimeters = newUnit(  (meters/100).to(2),                  "cm^2"  )
    ,              acres = newUnit(  meters.to(2),                           "a"  , &exoticunits)
    ,        cubicmeters = newUnit(  meters.to(3),                         "m^3"  )
    ,   cubiccentimeters = newUnit(  (meters/100).to(3),                  "cm^3"  )
