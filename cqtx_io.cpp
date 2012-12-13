@@ -507,7 +507,6 @@ struct LaTeXistream: streamT{
 //      cout << "Reading table from input: - - - - {" << valcls.str() << "\n - - - - - - - - - - - - - - - - }" << endl ;
       unsigned int coln=0;
       measure thisline;
-      thisline.clear();
       do {
         physquantity thisthing=0;
         string colvstr = extract_mathfrom_LaTeXinlinemathenv(valcls.getLaTeXhcell());
@@ -555,7 +554,7 @@ struct LaTeXistream: streamT{
           tcl >> thisthing[*colunits[coln].first];
         }
 //        cout << thisthing << endl;
-        thisline.push_back(thisthing.label(colcapts[coln]));
+        thisline.let(colcapts[coln])=thisthing;
         ++coln;
       }while (!valcls.eofs());
        //cout << thisline;
@@ -1779,7 +1778,7 @@ class QTeXdiagmaster : QTeXgrofstream {
 
     physquantity x = rng.l();
     crvfile.cwrite('p');
-    crvfile.dpwrite(x[*origxUnit], rng.l()[*origyUnit]);
+    crvfile.dpwrite(x[*origxUnit], f(rng.l())[*origyUnit]);
     crvfile.cwrite(' ');
     for (x += plotstep; x<rng.r(); x+=plotstep) {
       physquantity fnval = f(x);

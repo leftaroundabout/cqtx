@@ -344,7 +344,7 @@ class measure : public std::vector<physquantity> {
     for (std::vector<physquantity>::iterator i = begin(); i!= end(); ++i){
       cout << i->cptstr() << ", ";
     }
-    cout << "\nAbort.\n";abort();
+    cout << "\nAbort."<<std::endl; abort();
     push_back( physquantity()/*(0*real1)*/ ); back().label(cptsc);
     return back();
   }
