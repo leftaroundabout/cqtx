@@ -453,7 +453,15 @@ struct LaTeXistream: streamT{
     strs tableenv;
     do{
       tableenv.str(getenvironment("table"));
-    }while (tableenv.str().size()>0 && getpofcommand(tableenv.str(), "caption")!=TableCaption);
+    }while (tableenv.str().size()>0
+                && getpofcommand(tableenv.str(), "caption")!=TableCaption
+                && getpofcommand(tableenv.str(), "label")!=TableCaption
+                && getpofcommand(tableenv.str(), "label")!="tab:"+TableCaption);
+    
+    if(eofs()) {
+      std::cerr << "Table \"" << TableCaption << "\" not found in LaTeXistream" << std::endl;
+      abort();
+    }
     
     strs tabenv(tableenv.getenvironment("tabular"));
     
