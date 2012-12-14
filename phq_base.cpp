@@ -15,6 +15,8 @@
 
 #include <exception>
 #include <array>
+#include <functional>
+
 
 namespace_cqtxnamespace_OPEN
 
@@ -61,7 +63,11 @@ class phDimension{
   }
   
   enum class cgsSelect : size_t {
-    c=0, g, s                          };
+    c=0, g, s                   };
+    
+  size_t hashval()const {
+    return std::hash<int64_t>(*(int64_t) &c ^ (int64_t)s << 16);
+  }
 
  private:
   static auto gcd(dimensionsfixedp n, dimensionsfixedp m) -> dimensionsfixedp {
@@ -87,6 +93,16 @@ class phDimension{
   
   friend class phqdata_binstorage;
 };
+
+template<>
+struct std::hash<phDimension> {
+  auto operator()(const phDimension& d) {
+    return d.hashval();
+  }
+};
+
+
+
 struct phUnit{
   phDimension Dimension;
   double cgsPrefactor;
