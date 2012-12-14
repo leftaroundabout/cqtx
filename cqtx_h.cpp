@@ -236,6 +236,7 @@ namespace stdPhysUnitsandConsts {
    ,         millivolts = newUnit(  1e-3 * volts,                          "mV"  )
    ,         microvolts = newUnit(  1e-6 * volts,                     "{\\mu}V"  )
    ,               ohms = newUnit(  volts/amperes,                    "\\Omega"  )
+   ,          ohmmeters = newUnit(  ohms*meters,              "\\Omega\\cdot m"  )
    ,               mhos = newUnit(  amperes/volts,                      "\\mho"  )
    ,             teslas = newUnit(  volts*seconds/meters.to(2),             "T"  )
    ,               mols = newUnit(  6.02214179e+23*real1,                 "mol"  )
@@ -323,6 +324,12 @@ class measure : public std::vector<physquantity> {
   measure(const std::pair<physquantity,physquantity> &elems){push_back(elems.first); push_back(elems.second);}
   measure(physquantity elem0, physquantity elem1, physquantity elem2){push_back(elem0); push_back(elem1); push_back(elem2);}
 
+  measure& operator=(measure m) {
+    std::vector<physquantity>::clear();
+    std::vector<physquantity>::operator=(std::move(m));
+    return *this;
+  }
+  
   bool has(const captT &cptsc) const{
     for (std::vector<physquantity>::const_iterator i = begin(); i!= end(); ++i){
       if (i->caption==cptsc) return true;
@@ -655,6 +662,7 @@ class measureseq : std::vector<measure>{
       std::vector<measure>::push_back(mf);
     }
   }
+  
 
   using std::vector<measure>::size;
   using std::vector<measure>::clear;
