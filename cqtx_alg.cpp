@@ -1399,6 +1399,19 @@ class derivative_of_mine: public compactsupportfn<skeyT, svalT> {
     midp = itertoloc[locofiter[midp]];
   }
  public:
+#if 0
+  smooth_unsample(smooth_unsample &&cpf)
+    : eventnodes(std::move(cpf.eventnodes))
+    , densityname(std::move(cpf.densityname))
+    , stdsmoothener(cpf.stdsmoothener)
+    , stdsmoothener_is_new(std::move(cpf.stdsmoothener_is_new))
+    , smoothener_of_differcalc(std::move(cpf.smoothener_of_differcalc))
+    , _mean(std::move(cpf._mean)), _stddeviation(std::move(cpf._stddeviation))
+    , totlbord(std::move(cpf.totlbord)), totrbord(std::move(cpf.totrbord))
+    , midp(std::move(cpf.midp)), num_at_minwidth(std::move(cpf.num_at_minwidth)) {
+    cpf.stdsmoothener = nullptr;
+  }
+#endif
   smooth_unsample(const smooth_unsample &cpf)
     : eventnodes(cpf.eventnodes)
     , densityname(cpf.densityname)
