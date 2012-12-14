@@ -321,6 +321,9 @@ class fittable_phmsqfn : public phmsq_function{
 #endif
             ++i;
         }
+       for(auto& q: expprms) {
+         if(q.is_identical_zero()) throw(q);
+       }
 #ifdef DIMANALYSIS_EXAMPLEPARAMS_PROCESSMESSAGES
        cout << "Result:\n" << expprms << endl;
 #endif
