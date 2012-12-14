@@ -801,7 +801,8 @@ auto miniTeX(const std::string& str) -> std::string {
         --i;
         TeXd << miniTeX(toromanize);
        }else{
-        parse_err("Backslash unfollowed by a recognized command.");
+//         parse_err("Backslash unfollowed by a recognized command.");
+        TeXd << '\\';
       }
      }else if(str[i]=='$'){
      }else if(str[i]=='^'){
