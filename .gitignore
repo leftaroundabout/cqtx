@@ -28,6 +28,7 @@ test/bin/*
 
 # Swap junk files introduced by certain file systems
 *.swp
+*.kate-swp
 
 */cpyedstuff/*
 
