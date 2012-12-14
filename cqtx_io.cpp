@@ -732,6 +732,56 @@ auto miniTeX(const std::string& str) -> std::string {
        }else if(str.substr(i,5)=="omega"){
         TeXd << u8"\u03c9";   i+=4;
         
+       }else if(str.substr(i,5)=="Alpha"){
+        TeXd << u8"\u0391";   i+=4;
+       }else if(str.substr(i,4)=="Beta"){
+        TeXd << u8"\u0392";   i+=3;
+       }else if(str.substr(i,5)=="Gamma"){
+        TeXd << u8"\u0393";   i+=4;
+       }else if(str.substr(i,5)=="Delta"){
+        TeXd << u8"\u0394";   i+=4;
+       }else if(str.substr(i,7)=="Epsilon"){
+        TeXd << u8"\u0395";   i+=6;
+       }else if(str.substr(i,4)=="Zeta"){
+        TeXd << u8"\u0396";   i+=3;
+       }else if(str.substr(i,3)=="Eta"){
+        TeXd << u8"\u0397";   i+=2;
+       }else if(str.substr(i,5)=="Theta"){
+        TeXd << u8"\u0398";   i+=4;
+       }else if(str.substr(i,4)=="Iota"){
+        TeXd << u8"\u0399";   i+=3;
+       }else if(str.substr(i,5)=="Kappa"){
+        TeXd << u8"\u039a";   i+=4;
+       }else if(str.substr(i,6)=="Lambda"){
+        TeXd << u8"\u039b";   i+=5;
+       }else if(str.substr(i,2)=="Mu"){
+        TeXd << u8"\u039c";   i+=1;
+       }else if(str.substr(i,2)=="Nu"){
+        TeXd << u8"\u039d";   i+=1;
+       }else if(str.substr(i,2)=="Xi"){
+        TeXd << u8"\u039e";   i+=1;
+       }else if(str.substr(i,7)=="Omikron"){
+        TeXd << u8"\u039f";   i+=6;
+       }else if(str.substr(i,2)=="Pi"){
+        TeXd << u8"\u03a0";   i+=1;
+       }else if(str.substr(i,3)=="Rho"){
+        TeXd << u8"\u03a1";   i+=2;
+       }else if(str.substr(i,5)=="Sigma"){
+        TeXd << u8"\u03a3";   i+=4;
+       }else if(str.substr(i,3)=="Tau"){
+        TeXd << u8"\u03a4";   i+=2;
+       }else if(str.substr(i,7)=="Upsilon"){
+        TeXd << u8"\u03a5";   i+=6;
+       }else if(str.substr(i,3)=="Phi"){
+        TeXd << u8"\u03a6";   i+=2;
+       }else if(str.substr(i,3)=="Chi"){
+        TeXd << u8"\u03a7";   i+=2;
+       }else if(str.substr(i,3)=="Psi"){
+        TeXd << u8"\u03a8";   i+=2;
+       }else if(str.substr(i,5)=="Omega"){
+        TeXd << u8"\u03a9";   i+=4;
+
+        
        }else if(str.substr(i,4)=="hat{"){
         i+=4;
         for(unsigned brlyr=1; brlyr>0; ++i) {
@@ -740,14 +790,16 @@ auto miniTeX(const std::string& str) -> std::string {
            else TeXd << miniTeX_hat(str[i]);
         }
         --i;
-       }else if(str.substr(i,7)=="mathrm{"){
+       }else if(str.substr(i,7)=="mathrm{"){ //ignore this, since terminal is in roman mode anyway
         i+=7;
+        std::string toromanize;
         for(unsigned brlyr=1; brlyr>0; ++i) {
           if(str[i]=='{') ++brlyr;
            else if(str[i]=='}') --brlyr;
-           else TeXd << str[i];
+          if(brlyr) toromanize += str[i];
         }
         --i;
+        TeXd << miniTeX(toromanize);
        }else{
         parse_err("Backslash unfollowed by a recognized command.");
       }
@@ -1766,6 +1818,8 @@ class QTeXdiagmaster : QTeXgrofstream {
     physquantity plotstep = rng.width()/res;
     if (rng.l().is_identical_zero()) rng.l() = rng.width()*0;  //pleonastic?..   (this simply ensures that the left border has a proper physical unit, despite being 0)
     
+    (std::cout << "Plot lambda of [" << rng.l() << ", " << rng.r() << "] ").flush();
+    std::cout << "-> [" << f(rng.l()) << ", " << f(rng.r()) << "]" << std::endl;
     phq_interval yrng( f(rng.l()), f(rng.r()) );
 
     
