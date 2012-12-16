@@ -602,9 +602,9 @@ class physquantity {                           //Klasse f\"ur physikalische Gr\"
     if (Dimension() != 1){
       if (tunit==NULL) {
         if (valincgs!=0 || myError.valincgs!=0){
-          cerr << *this << "Fehler: nicht dimensionslos";
+//           cerr << *this << "Fehler: nicht dimensionslos";
           //abort();
-          throw Dimension();
+          throw physDimensionException({}, {Dimension()});
         }
        }else{
         if (valintu!=0 || myError.valintu!=0)
@@ -1372,6 +1372,8 @@ physquantity abs(const std::complex<physquantity> &mtpv){
 physquantity abs(const physquantity &mtpv){ return mtpv.abs(); }
 int sgn(const physquantity &mtpv){ return mtpv.sgn(); }
 physquantity sqrt(const physquantity &mtpv){ return mtpv.sqrt(); }
+
+auto inv(const physquantity& mtpv) -> physquantity { return mtpv.inv(); }
 
 
 const physquantity operator *(const phUnit &left, const phUnit &mtpv) {
