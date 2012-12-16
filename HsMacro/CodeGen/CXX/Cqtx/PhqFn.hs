@@ -12,18 +12,139 @@
 --   You should have received a copy of the GNU General Public License
 --   along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
-{-# LANGUAGE Rank2Types         #-}
+{-# LANGUAGE Rank2Types            #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+-- {-# LANGUAGE FunctionalDependencies#-}
+{-# LANGUAGE FlexibleInstances     #-}
+-- {-# LANGUAGE UndecidableInstances  #-}
+{-# LANGUAGE ScopedTypeVariables   #-}
 
 module CodeGen.CXX.Cqtx.PhqFn where
 
-import Data.Ratio
-import Data.List
+import Control.Monad
+import Control.Monad.Writer
+import Control.Monad.Reader
+
 import Data.Function
+import Data.List
 import Data.Monoid
+import Data.Ratio
+import Data.Maybe
+import Data.Tuple
 -- import Data.Hashable
 -- import Data.HashMap
 
-type PhqIdf = String
+
+
+
+
+phqFn :: forall paramLabelsList paramValsList
+ . EquilenLists paramLabelsList paramValsList
+   => String                           -- ^ Name of the resulting phqFn C++ object
+    -> paramLabelsList String          -- ^ Default labels of the parameters
+    -> (forall x. PhqfnDefining x
+             => paramValsList x -> x)  -- ^ Function definition, as a lambda
+    -> CqtxCode()                      -- ^ C++ class and object code for a cqtx fittable physical function corresponding to the given definition
+phqFn fnName defaultLabels function = ReaderT $ codeWith where
+ codeWith config = do
+     cxxLine     $ "                                                                COPYABLE_PDERIVED_CLASS(/*"
+     cxxLine     $ "class*/"++className++",/*: public */fittable_phmsqfn) {"
+     helpers <- cxxIndent 2 $ dimFetchDeclares
+     cxxLine     $ " public:"
+     cxxIndent 2 $ do constructor
+                      paramExamples helpers
+                      functionEval
+     cxxLine     $ "} " ++ fnName ++ ";"
+   where 
+         fnResultTerm :: PhqFuncTerm
+         fnResultTerm = function $
+               fmap (\i->PhqFnParameter $ PhqIdf i) parameterIds
+         fnDimTrace :: DimTracer
+         fnDimTrace = function $
+               fmap (\i->VardimVar $ PhqIdf i) parameterIds
+               
+         functionEval :: CXXCode()
+         functionEval = do
+            cxxLine     $ "auto operator()(const measure& parameters)const -> physquantity {"
+            cxxIndent 2 $ do
+               result <- cqtxTermImplementation "parameters" fnResultTerm
+               cxxLine     $ "return ("++result++");"
+            cxxLine     $ "}"
+         
+         paramExamples :: [(Int,CXXExpression)] -> CXXCode()
+         paramExamples helpers = do
+            cxxLine     $ "auto example_parameterset( const measure& constraints\\n\
+                          \                         , const physquantity& desiredret) -> measure {"
+            cxxIndent 2 $ do
+               cxxLine     $ "measure example;"
+               forM_ helpers $ \(i,helper) -> do
+                  cxxLine     $ "example.let(argdrfs["++show i++"]) = "
+                                     ++helper++"(constraints, desiredret);"
+               cxxLine     $ "return example;"
+            cxxLine     $ "}"
+         
+         dimFetchDeclares :: CXXCode [(Int,CXXExpression)]
+         dimFetchDeclares = forM parameterIdsList $ \i -> do
+            let functionName = "example_parameter"++show i++"value"
+            cxxLine     $ "auto "++functionName++"( const measure& constraints\\n\
+                          \                       , const physquantity& desiredret) -> physquantity {"
+            cxxIndent 2 $ do
+               forM_ (dimExpressionsFor (PhqIdf i) fnDimTrace) $ \decomp -> do
+                  cxxLine     $ "{"
+                  cxxIndent 2 $ do
+                     cxxLine     $ "bool thisdecomp_failed = false;"
+                     forM_ (fixValDecomposition decomp) $ \(e,_) -> case e of
+                        PhqFnParamVal (PhqIdf n) -> do
+                           cxxLine    $ "if(!constraints.has(*argdrfs["++show n++"]))"
+                           cxxLine    $ "  thisdecomp_failed = true;"
+                        _ -> return ()
+                     cxxLine     $ "if(!thisdecomp_failed) {"
+                     cxxIndent 2 $ do
+                        result <- cqtxTermImplementation "constraints" (calculateDimExpression decomp)
+                        cxxLine     $ "return ("++result++")"
+                     cxxLine     $ "}"
+                  cxxLine     $ "}"
+               cxxLine     $ "std::cerr << \"Insufficient constraints given to determine the physical dimension\\n\
+                                            \  of parameter \\\"\" << *argdrfs["++show i++"] << \"\\\"\
+                                             \ in phqfn '"++fnName++"'.\\n Sufficient constraint choices would be:\\n\";"
+               forM_ (dimExpressionsFor (PhqIdf i) fnDimTrace) $ \(DimExpression decomp) -> do
+                  cxxLine  $ "std::cerr<<\"  \"" ++ concat (intersperse"<<','<<"$
+                                [ case fixv of
+                                   PhqDimlessConst          -> ""
+                                   PhqFnParamVal (PhqIdf j) -> "*argdrfs["++show j++"]"
+                                   PhqFnResultVal           -> "\"<function result>\""
+                                | (fixv,_) <- decomp ]) ++ " << std::endl;"
+               cxxLine     $ "abort();"
+            cxxLine     $ "}"
+            return (i,functionName)
+         
+            
+         className = fnName++"Function"
+         
+         constructor = do
+            cxxLine     $ className ++"() {"
+            cxxIndent 2 $ do
+               cxxLine     $ "argdrfs.resize("++show nParams++");"
+               forM_ idxedDefaultLabels $ \(n,label) ->
+                  cxxLine  $ "argdrfs["++show n++"] = "++show label++";"
+            cxxLine     $ "}"
+         
+         parameterIdsList = map snd $ perfectZip defaultLabels parameterIds 
+         
+         parameterIds :: paramValsList Int
+         parameterIds = buildEquilenList defaultLabels (succ) 0
+         idxedDefaultLabels = map swap $ perfectZip defaultLabels parameterIds 
+         nParams = length idxedDefaultLabels
+
+
+
+
+
+
+data PhqIdf = PhqIdf Int deriving (Eq, Ord, Show)
+
+argderefv :: CXXExpression -> PhqIdf -> String
+argderefv paramSource (PhqIdf n) = "argdrfs["++show n++"]("++paramSource++")"
 
 data DimTracer = DimlessConstant
                | VardimVar PhqIdf
@@ -129,28 +250,6 @@ extractFixValExp v = (\(a,b)->(a,DimExpression b)) . go id . fixValDecomposition
 nubDimExprs :: [DimExpression] -> [DimExpression]
 nubDimExprs = map head . group . sort
 
--- data DimTheorem = DimEqualTo PhqFixValue
---                 | DimPowerOf DimTheorem Rational
---                 | DimProductOf [DimTheorem]
--- 
--- instance Eq DimTheorem where
---   DimEqualTo a==DimEqualTo b                 = a==b
---   DimPowerOf (DimEqualTo a) r==DimEqualTo s  = r==1 && a==b
---   DimPowerOf a r==DimPowerOf b s             = DimPowerOf a (r/s)==b
---   DimPowerOf (DimPowerOf a s) r==b           = DimPowerOf a (r*s)==b
---   DimPowerOf (DimProductOf l) r==b           = DimProductOf (map (`DimPowerOf`r) l)==b
---   DimProductOf l==b           = DimProductOf (map (`DimPowerOf`r) l)==b
-
---  eqResult (traceAsValue ida) (traceAsValue idb)
---             where eqResult e1 e2
---                    | (q,res) <- extractFixValExp idf (e1 //- e2) /= 0
---                    , q/=0         = expExpMap (/q) res
-
--- elemFoci :: [a] -> [(a,[a])]
--- elemFoci = go id
---  where go acc [] = []
---        go acc (e:l) = (e, acc l) : go (acc.(e:)) l
-
 
 
 dimExpressionsFor :: PhqIdf -> DimTracer -> [DimExpression]
@@ -169,8 +268,26 @@ dimExpressionsFor idf = go $ primDimExpr PhqFnResultVal
 
 
 
-type CXXFunc = String
-type CXXInfix = String
+
+
+
+
+type CXXExpression = String
+
+newtype CXXFunc = CXXFunc {wrapCXXFunc :: CXXExpression -> CXXExpression}
+newtype CXXInfix = CXXInfix {wrapCXXInfix :: CXXExpression -> CXXExpression -> CXXExpression}
+
+instance Eq CXXFunc where
+  CXXFunc f==CXXFunc g  = f""==g""
+instance Eq CXXInfix where
+  CXXInfix f==CXXInfix g  = ""`f`""==""`g`""
+
+cxxFunction :: CXXExpression -> CXXFunc
+cxxFunction s = CXXFunc $ \e -> s++"("++e++")"
+cxxInfix :: CXXExpression -> CXXInfix
+cxxInfix s = CXXInfix $ \e1 e2 -> "("++e1++s++e2++")"
+
+
 
 type PhysicalCqtxConst = String
 
@@ -180,7 +297,12 @@ data PhqFuncTerm = PhqFnDimlessConst Double
                  | PhqFnParameter PhqIdf
                  | PhqFnFuncApply CXXFunc PhqFuncTerm
                  | PhqFnInfixApply CXXInfix PhqFuncTerm PhqFuncTerm
-                 deriving (Eq, Show)
+                 deriving (Eq)
+                 
+cxxFuncPhqApply :: CXXExpression -> PhqFuncTerm -> PhqFuncTerm
+cxxFuncPhqApply s = PhqFnFuncApply $ cxxFunction s
+cxxInfixPhqApply :: CXXExpression -> PhqFuncTerm -> PhqFuncTerm -> PhqFuncTerm
+cxxInfixPhqApply s = PhqFnInfixApply $ cxxInfix s
 
 isPrimitive :: PhqFuncTerm -> Bool
 isPrimitive (PhqFnDimlessConst _) = True
@@ -192,30 +314,39 @@ isPrimitive _ = False
 instance Num PhqFuncTerm where
   fromInteger = PhqFnDimlessConst . fromInteger
   
-  (+) = PhqFnInfixApply "+"
-  (-) = PhqFnInfixApply "-"
-  (*) = PhqFnInfixApply "*"
+  (+) = cxxInfixPhqApply"+"
+  (-) = cxxInfixPhqApply"-"
   
-  negate = PhqFnFuncApply "-"
-  abs = PhqFnFuncApply "abs"
-  signum = PhqFnFuncApply "sgn"
+  a*(PhqFnDimlessConst 1) = a
+  (PhqFnDimlessConst 1)*b = b
+  a*b
+   | a==b       = PhqFnFuncApply (CXXFunc $ \e -> "("++e++").squared()") a
+   | otherwise  = cxxInfixPhqApply"*" a b
+  
+  negate = cxxFuncPhqApply"-"
+  abs = cxxFuncPhqApply"abs"
+  signum = cxxFuncPhqApply"sgn"
 
 instance Fractional PhqFuncTerm where
   fromRational = PhqFnDimlessConst . fromRational
   
-  (/) = PhqFnInfixApply "/"
+  (/) = cxxInfixPhqApply"/"
   
-  recip = PhqFnFuncApply "inv"
+  recip = cxxFuncPhqApply"inv"
 
 instance Floating PhqFuncTerm where
   pi = PhqFnDimlessConst pi
-  exp = PhqFnFuncApply "exp"
-  log = PhqFnFuncApply "ln"
-  sqrt = PhqFnFuncApply "sqrt"
-  sin = PhqFnFuncApply "sin"
-  cos = PhqFnFuncApply "cos"
-  tan = PhqFnFuncApply "tan"
-  tanh = PhqFnFuncApply "tanh"
+  exp = cxxFuncPhqApply"exp"
+  log = cxxFuncPhqApply"ln"
+  sqrt = cxxFuncPhqApply"sqrt"
+  a**(PhqFnDimlessConst 1) = a
+  a**(PhqFnDimlessConst x) = PhqFnFuncApply
+           (CXXFunc $ \base -> "(("++base++").to("++show x++"))") a
+  a**x = exp(log a*x)
+  sin = cxxFuncPhqApply"sin"
+  cos = cxxFuncPhqApply"cos"
+  tan = cxxFuncPhqApply"tan"
+  tanh = cxxFuncPhqApply"tanh"
   asin = error "asin of physquantities not currently implemented."
   acos = error "acos of physquantities not currently implemented."
   atan = error "atan of physquantities not currently implemented."
@@ -280,39 +411,133 @@ seqPrunePhqFuncTerm = prune . reverse . go []
                 | r'@(PhqFnTempRef n')<-reflist!!n = chase r'
               chase c = c
        
-       prune l = (last l, filter(isRefd . fst) $ zip[0..] l)
-        where isRefd n = any (refersTo n) l
+       prune :: [PhqFuncTerm] -> (PhqFuncTerm, [(Int, PhqFuncTerm)])
+       prune l = ( inlineIn $ last l, catMaybes $ map zap indexed )
+        where indexed = zip[0..] l
+              
+              zap (n, e)
+               | n`elem`doomed  = Nothing
+               | otherwise      = Just (n, inlineIn e)
+              
+              inlineIn e@(PhqFnTempRef n')
+               | n'`elem`doomed = inlineIn $ l!!n'
+              inlineIn (PhqFnFuncApply f e) = PhqFnFuncApply f $ inlineIn e
+              inlineIn (PhqFnInfixApply f a b) = PhqFnInfixApply f (inlineIn a) (inlineIn b)
+              inlineIn e = e
+              
+              
+              doomed = filter ((<=1) . length . referingTo) $ map fst indexed
+              
+              referingTo n = filter (refersTo n) l
               refersTo n (PhqFnTempRef n') = n==n'
               refersTo n (PhqFnFuncApply f e) = refersTo n e
               refersTo n (PhqFnInfixApply f a b) = refersTo n a || refersTo n b
               refersTo _ _ = False
---        prune l = (last l, filter(isRefd . fst) $ zip[0..] l)
---         where isRefd n = filter (refersTo n) l
---               refersTo n (PhqFnTempRef n') = n==n'
---               refersTo n (PhqFnFuncApply f e) = refersTo n e
---               refersTo n (PhqFnInfixApply f a b) = refersTo n a || refersTo n b
---               refersTo _ _ = False
-              
-              
---        dropPrimitives l@(c:r)
---         | isPrimitive c = dropPrimitives r
---        dropPrimitives l = l
-       
---        seqdef (expr:l) = defrep expr []
---         where refs = reverse l
---               
---               defrep (PhqFnTempRef n) acc
---               defrep term acc = term:acc
+
+ 
+ 
+calculateDimExpression :: DimExpression -> PhqFuncTerm
+calculateDimExpression (DimExpression decomp) = product $ map phqfImplement decomp
+ where phqfImplement (e, x) = implement e ** fromRational x
+       implement (PhqFnParamVal pr) = PhqFnParameter pr
+       implement PhqFnResultVal = PhqFnPhysicalConst "desiredret"
 
 
-cqtxTermImplementation :: PhqFuncTerm -> [String]
-cqtxTermImplementation e
-           = [ "physquantity tmp"++show rn++" = "++showE e++";" | (rn,e)<-seqChain ]
-           ++ ["return " ++ showE result ++ ";"]
+
+
+
+
+newtype LinesBuildup = LinesBuildup {builtupLines :: [String]->[String]}
+instance Monoid LinesBuildup where
+  mempty = LinesBuildup id
+  mappend (LinesBuildup a) (LinesBuildup b) = LinesBuildup (a.b)
+
+linesBuildMap :: (String->String) -> LinesBuildup -> LinesBuildup
+linesBuildMap f (LinesBuildup a) = LinesBuildup (map f (a[]) ++)
+  
+type CXXCode = Writer LinesBuildup
+
+instance Show (CXXCode()) where
+  show = unlines . ("do":) . map printout . ($[]) . builtupLines . execWriter
+   where printout l = "   cxxLine "++show l
+
+cxxLine :: String -> CXXCode()
+cxxLine s = tell $ LinesBuildup (s:)
+
+cxxIndent :: Int -> CXXCode a -> CXXCode a
+cxxIndent n = censor $ linesBuildMap (replicate n ' '++)
+
+
+cqtxTermImplementation :: CXXExpression -> PhqFuncTerm -> CXXCode CXXExpression
+cqtxTermImplementation paramSource e = do
+           forM_ seqChain $ \(rn,se) ->
+              cxxLine $ "physquantity tmp"++show rn++" = "++showE se++";"
+           return $ showE result
  where (result,seqChain) = seqPrunePhqFuncTerm e
        showE (PhqFnDimlessConst x) = "("++show x++"*real1)"
-       showE (PhqFnPhysicalConst x) = show x
-       showE (PhqFnParameter x) = show x
+       showE (PhqFnPhysicalConst x) = "("++x++")"
+       showE (PhqFnParameter x) = argderefv paramSource x
        showE (PhqFnTempRef n) = "tmp"++show n
-       showE (PhqFnFuncApply f a) = f++"("++showE a++")"
-       showE (PhqFnInfixApply f a b) = "("++showE a++f++showE b++")"
+       showE (PhqFnFuncApply (CXXFunc f) a) = f $ showE a
+       showE (PhqFnInfixApply (CXXInfix f) a b) = showE a `f` showE b
+
+
+
+type CqtxConfig = ()
+type CqtxCode = ReaderT CqtxConfig CXXCode
+
+withDefaultCqtxConfig :: CqtxCode a -> CXXCode a
+withDefaultCqtxConfig = flip runReaderT ()
+
+
+
+
+
+class (Floating a) => PhqfnDefining a
+
+instance PhqfnDefining PhqFuncTerm
+instance PhqfnDefining DimTracer
+
+
+
+
+
+class (Functor l1, Functor l2) => EquilenLists l1 l2 where
+  perfectZip :: l1 a -> l2 b -> [(a,b)]
+  buildEquilenList :: l1 a -> (b->b) -> b -> l2 b
+--   singleList :: l1 a -> [a]
+--   unfoldToMatch :: l1 a -> (b -> (c,b)) -> b -> l2 c
+
+data EquilenEnd a = P deriving (Show)
+infixr 5 :.
+data EquilenCons l a = a :. l a deriving (Show)
+
+instance Functor EquilenEnd where
+  fmap _ P = P
+instance (Functor l) => Functor (EquilenCons l) where
+  fmap f (x:.xs) = f x :. fmap f xs
+
+instance EquilenLists EquilenEnd EquilenEnd where
+  perfectZip P P = []
+  buildEquilenList P _ _ = P
+--   singleList P = []
+--   unfoldToMatch P _ _ = P
+  
+instance (EquilenLists l1 l2) => EquilenLists (EquilenCons l1) (EquilenCons l2) where
+  perfectZip (x:.xs) (y:.ys) = (x,y) : perfectZip xs ys
+  buildEquilenList (_:.xs) f s = s :. buildEquilenList xs f (f s)
+--   singleList (x:.xs) = x:xs
+--   unfoldToMatch (_:.xs) uff s = let (y,s') = uff s
+--                                 in  y :. unfoldToMatch xs uff s'
+
+instance EquilenLists [] [] where   -- obviously unsafe
+  perfectZip = zip
+  buildEquilenList [] _ _ = []
+  buildEquilenList (_:xs) f s = s : buildEquilenList xs f (f s)
+--   singleList = id
+--   unfoldToMatch [] _ _ = []
+--   unfoldToMatch (_:xs) uff s = let (y,s') = uff s
+--                                in  y : unfoldToMatch xs uff s'
+
+
+-- buildEquilenList l1 f = unfoldToMatch l1 $ (\b->(b,b)) . f
