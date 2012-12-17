@@ -66,7 +66,7 @@ class phDimension{
     c=0, g, s                   };
     
   size_t hashval()const {
-    return std::hash<int64_t>(*(int64_t) &c ^ (int64_t)s << 16);
+    return std::hash<int64_t>()((int64_t)cint ^ (int64_t)gint << 16 ^ (int64_t)sint << 32);
   }
 
  private:
@@ -94,12 +94,16 @@ class phDimension{
   friend class phqdata_binstorage;
 };
 
+namespace_cqtxnamespace_CLOSE
+namespace std{
 template<>
-struct std::hash<phDimension> {
-  auto operator()(const phDimension& d) {
+struct hash<cqtx::phDimension> {
+  auto operator()(const cqtx::phDimension& d) -> size_t {
     return d.hashval();
   }
 };
+}
+namespace_cqtxnamespace_OPEN
 
 
 
