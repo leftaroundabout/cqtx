@@ -12,6 +12,8 @@
 --   You should have received a copy of the GNU General Public License
 --   along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
+{-# LANGUAGE PatternGuards         #-}
+{-# LANGUAGE TupleSections         #-}
 {-# LANGUAGE Rank2Types            #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 -- {-# LANGUAGE FunctionalDependencies#-}
@@ -19,7 +21,40 @@
 -- {-# LANGUAGE UndecidableInstances  #-}
 {-# LANGUAGE ScopedTypeVariables   #-}
 
-module CodeGen.CXX.Cqtx.PhqFn where
+-- |
+-- Module      : CodeGen.CXX.Cqtx.PhqFn 
+-- Copyright   : (c) Justus Sagemüller 2012
+-- License     : GPL v3
+-- 
+-- Maintainer  : (@) sagemuej $ smail.uni-koeln.de
+-- Stability   : experimental
+-- Portability : portable
+-- 
+-- While the cqtx library provides quite versatile and /in principle/ very
+-- low-requirement fitting of general physical functions (namely without the
+-- need for any gradients etc.), in practise this is hampered by the cumbersomeness
+-- of defining the fittable_phmsqfn subclasses. The macros in @fitfnmacros.h@ can
+-- only partially alleviate this: due to the limits of the C preprocessor, most of
+-- the calculation load needs to be done in also cumbersome C++ templates or,
+-- more likely, at runtime. At the moment, this is implemented rather poorly, in
+-- particular the almost bogosort-quality dimensional analysis.
+-- 
+-- This Haskell module does not claim to be an optimal solution, but it produces
+-- significantly better code than the CPP macros, with very safe and easy invocation.
+-- In the future this might become a lot more powerful, since it is also possible
+-- to automatically create highly optimised specialised versions of the functions, e.g.
+-- squaredistance-calculation on CUDA.
+-- 
+
+module CodeGen.CXX.Cqtx.PhqFn( phqFn
+                                -- * General Cqtx code generation
+                             , module CodeGen.CXX.Code
+                             , CqtxCode
+                             , CqtxConfig, withDefaultCqtxConfig
+                                -- * Length-indexed lists
+                             , EquilenEnd(P), EquilenCons(..)
+                             ) where
+import CodeGen.CXX.Code
 
 import Control.Monad
 import Control.Monad.Writer
@@ -38,13 +73,34 @@ import Data.Tuple
 
 
 
+
+-- | Create a physical function that can be fitted to measured data using the cqtx
+-- algorithms such as @evolution_minimizer@. The invocation is similar to the
+-- primitive CPP macros, but type-safe and allows full Haskell syntax in the
+-- definition – though this can of course be exploited only so much, since phqfns
+-- are very limited in their abilities. To make sure these limits are maintained
+-- we use universally-quantised arguments (which also suits the implementation very
+-- well).
+-- 
+-- For example, the standard gaussian peak @A⋅exp(-(x-x₀)²/(2⋅σ²))@ could be defined thus:
+-- 
+-- >  phqFn "gaussPeak" ("x":."x_0":."\\sigma":."A":.P)
+-- >                 (\ ( x :.  x0 :.  sigma  :. a :.P)
+-- >                   -> let q = (x-x0)/sigma in  a * exp(-0.5 * q^2) )
+-- 
+-- The use of the type-determined–length lists makes it impossible to accidentally
+-- give different numbers of parameter bindings and -labels, but using ordinary lists
+-- is also possible.
+-- 
+-- Avoidance of duplicate calculation, as well as rudimentary optimisation, is taken
+-- care for by this preprocessor.
 phqFn :: forall paramLabelsList paramValsList
  . EquilenLists paramLabelsList paramValsList
    => String                           -- ^ Name of the resulting phqFn C++ object
     -> paramLabelsList String          -- ^ Default labels of the parameters
     -> (forall x. PhqfnDefining x
              => paramValsList x -> x)  -- ^ Function definition, as a lambda
-    -> CqtxCode()                      -- ^ C++ class and object code for a cqtx fittable physical function corresponding to the given definition
+    -> CqtxCode()                      -- ^ C++ class and object code for a cqtx fittable physical function corresponding to the given definition.
 phqFn fnName defaultLabels function = ReaderT $ codeWith where
  codeWith config = do
      cxxLine     $ "                                                                COPYABLE_PDERIVED_CLASS(/*"
@@ -67,18 +123,21 @@ phqFn fnName defaultLabels function = ReaderT $ codeWith where
          functionEval = do
             cxxLine     $ "auto operator()(const measure& parameters)const -> physquantity {"
             cxxIndent 2 $ do
+--                cxxLine     $ "std::cout << \"evaluate "++fnName++" with parameters\\n\""
+--                cxxLine     $ "          << parameters << std::endl;"
                result <- cqtxTermImplementation "parameters" fnResultTerm
                cxxLine     $ "return ("++result++");"
             cxxLine     $ "}"
          
          paramExamples :: [(Int,CXXExpression)] -> CXXCode()
          paramExamples helpers = do
-            cxxLine     $ "auto example_parameterset( const measure& constraints\\n\
-                          \                         , const physquantity& desiredret) -> measure {"
+            cxxLine     $ "auto example_parameterset( const measure& constraints\n\
+                          \                         , const physquantity& desiredret)const override -> measure {"
             cxxIndent 2 $ do
                cxxLine     $ "measure example;"
                forM_ helpers $ \(i,helper) -> do
-                  cxxLine     $ "example.let(argdrfs["++show i++"]) = "
+                  cxxLine     $ "if(!constraints.has(*argdrfs["++show i++"]))"
+                  cxxLine     $ "  example.let(*argdrfs["++show i++"]) = "
                                      ++helper++"(constraints, desiredret);"
                cxxLine     $ "return example;"
             cxxLine     $ "}"
@@ -86,10 +145,12 @@ phqFn fnName defaultLabels function = ReaderT $ codeWith where
          dimFetchDeclares :: CXXCode [(Int,CXXExpression)]
          dimFetchDeclares = forM parameterIdsList $ \i -> do
             let functionName = "example_parameter"++show i++"value"
-            cxxLine     $ "auto "++functionName++"( const measure& constraints\\n\
-                          \                       , const physquantity& desiredret) -> physquantity {"
+            let resultOptions = relevantDimExprsFor (PhqIdf i) fnDimTrace
+            
+            cxxLine     $ "auto "++functionName++"( const measure& constraints\n\
+                          \                       , const physquantity& desiredret)const -> physquantity {"
             cxxIndent 2 $ do
-               forM_ (dimExpressionsFor (PhqIdf i) fnDimTrace) $ \decomp -> do
+               forM_ resultOptions $ \decomp -> do
                   cxxLine     $ "{"
                   cxxIndent 2 $ do
                      cxxLine     $ "bool thisdecomp_failed = false;"
@@ -101,18 +162,19 @@ phqFn fnName defaultLabels function = ReaderT $ codeWith where
                      cxxLine     $ "if(!thisdecomp_failed) {"
                      cxxIndent 2 $ do
                         result <- cqtxTermImplementation "constraints" (calculateDimExpression decomp)
-                        cxxLine     $ "return ("++result++")"
+                        cxxLine     $ "physquantity result = ("++result++");"
+                        cxxLine     $ "return result.werror(result);"
                      cxxLine     $ "}"
                   cxxLine     $ "}"
                cxxLine     $ "std::cerr << \"Insufficient constraints given to determine the physical dimension\\n\
                                             \  of parameter \\\"\" << *argdrfs["++show i++"] << \"\\\"\
                                              \ in phqfn '"++fnName++"'.\\n Sufficient constraint choices would be:\\n\";"
-               forM_ (dimExpressionsFor (PhqIdf i) fnDimTrace) $ \(DimExpression decomp) -> do
-                  cxxLine  $ "std::cerr<<\"  \"" ++ concat (intersperse"<<','<<"$
+               forM_ resultOptions $ \(DimExpression decomp) -> do
+                  cxxLine  $ "std::cerr<<\"  \"" ++ concat (intersperse"<<','"$
                                 [ case fixv of
                                    PhqDimlessConst          -> ""
-                                   PhqFnParamVal (PhqIdf j) -> "*argdrfs["++show j++"]"
-                                   PhqFnResultVal           -> "\"<function result>\""
+                                   PhqFnParamVal (PhqIdf j) -> "<<miniTeX(*argdrfs["++show j++"])"
+                                   PhqFnResultVal           -> "<<\"<function result>\""
                                 | (fixv,_) <- decomp ]) ++ " << std::endl;"
                cxxLine     $ "abort();"
             cxxLine     $ "}"
@@ -146,24 +208,29 @@ data PhqIdf = PhqIdf Int deriving (Eq, Ord, Show)
 argderefv :: CXXExpression -> PhqIdf -> String
 argderefv paramSource (PhqIdf n) = "argdrfs["++show n++"]("++paramSource++")"
 
-data DimTracer = DimlessConstant
+data DimTracer = DimlessConstant (Maybe Rational)
                | VardimVar PhqIdf
-               | DimEqualAnd (DimTracer,DimTracer) DimTracer
+               | DimEqualities [(DimTracer,DimTracer)] -- pairs of expressions that should have equal phys-dimension, but not necessarily related to the result
+                               [DimTracer]             -- expressions that should have the same phys-dimension as the result
                | DimtraceProduct [DimTracer]
                | DimtracePower DimTracer Rational
                deriving(Show)
 
+unknownDimlessConst :: DimTracer
+unknownDimlessConst = DimlessConstant Nothing
 
 beDimLess :: DimTracer -> DimTracer
-beDimLess a = DimEqualAnd (a, DimlessConstant) DimlessConstant
+beDimLess a = DimEqualities [(a, unknownDimlessConst)] [unknownDimlessConst]
+biBeDimLess :: DimTracer -> DimTracer -> DimTracer
+biBeDimLess a b = DimEqualities (map(,unknownDimlessConst)[a,b]) [unknownDimlessConst]
 
 
 instance Num DimTracer where
-  fromInteger _ = DimlessConstant
+  fromInteger = DimlessConstant . Just . fromInteger
   
-  a + b = (a, b) `DimEqualAnd` a
+  a + b = DimEqualities [(a,b)] [a,b]
   
-  a - b = (a, b) `DimEqualAnd` a
+  a - b = DimEqualities [(a,b)] [a,b]
   
   DimtraceProduct l * tr = DimtraceProduct (tr:l)
   tr * DimtraceProduct l = DimtraceProduct (tr:l)
@@ -173,11 +240,11 @@ instance Num DimTracer where
   
   abs = id
   
-  signum a = (a, a) `DimEqualAnd` DimlessConstant
+  signum a = DimEqualities [(a,a)] [unknownDimlessConst]
 
   
 instance Fractional DimTracer where
-  fromRational _ = DimlessConstant
+  fromRational = DimlessConstant . Just
   
   DimtraceProduct l / tr = DimtraceProduct (recip tr : l)
   a / b = DimtraceProduct [a, recip b]
@@ -186,11 +253,12 @@ instance Fractional DimTracer where
 
 
 instance Floating DimTracer where
-  pi = DimlessConstant
+  pi = unknownDimlessConst
   exp = beDimLess; log = beDimLess
   sqrt a = DimtracePower a (1/2)
-  a**b = (a,DimlessConstant) `DimEqualAnd` beDimLess b
-  a`logBase`b = (a,DimlessConstant) `DimEqualAnd` beDimLess b
+  a**(DimlessConstant (Just b)) = DimtracePower a b
+  a**b = biBeDimLess a b
+  logBase = biBeDimLess
   sin = beDimLess; cos = beDimLess; tan = beDimLess
   asin = beDimLess; acos = beDimLess; atan = beDimLess
   sinh = beDimLess; cosh = beDimLess; tanh = beDimLess
@@ -215,27 +283,52 @@ invDimExp = expExpMap negate
 primDimExpr :: PhqFixValue -> DimExpression
 primDimExpr v = DimExpression[(v,1)]
 
-dimExpNormalForm :: DimExpression -> DimExpression    -- DimExpression must always be normalised
+dimExpNormalForm :: DimExpression -> DimExpression    -- DimExpression must always be normalised to this form
 dimExpNormalForm (DimExpression l) = DimExpression . reduce . sortf $ l
  where sortf = sortBy (compare`on`fst)
-       reduce ((PhqDimlessConst,_):l) = reduce l
-       reduce ((a,r):β@(b,s):l)
-        | a==b       = reduce $ (a,r+s):l
-        | otherwise  = (a,r) : reduce (β:l)
-       reduce l = l
+       reduce ((PhqDimlessConst,_):l') = reduce l'
+       reduce ((a,r):β@(b,s):l')
+        | a==b       = reduce $ (a,r+s):l'
+        | otherwise  = (a,r) : reduce (β:l')
+       reduce l' = l'
 
 instance Monoid DimExpression where
   mempty = DimExpression[]
   mappend (DimExpression a) (DimExpression b) = dimExpNormalForm $ DimExpression(a++b)
   mconcat l = dimExpNormalForm . DimExpression $ l >>= fixValDecomposition
 
+dimExprnComplexity :: DimExpression -> Integer
+dimExprnComplexity (DimExpression l) = sum $ map complexity l
+ where complexity (_, fr) = abs(denominator fr) + abs(numerator fr - 1)
 
-traceAsValue :: DimTracer -> DimExpression
-traceAsValue DimlessConstant = mempty
-traceAsValue (VardimVar a) = primDimExpr $ PhqFnParamVal a
-traceAsValue (DimEqualAnd (_,_) v) = traceAsValue v
-traceAsValue (DimtraceProduct l) = mconcat $ map traceAsValue l
-traceAsValue (DimtracePower a q) = expExpMap (q*) $ traceAsValue a
+compareDimsBasis :: DimExpression -> DimExpression -> Ordering
+compareDimsBasis (DimExpression l) (DimExpression r)
+             = comp (map fst l) (map fst r)
+ where comp [] [] = EQ
+       comp _ [] = GT
+       comp [] _ = LT
+       comp (l:ls) (r:rs)
+        | l<r   = GT
+        | l>r   = LT
+        | l==r  = comp ls rs
+
+strictlySimplerDimsBasis :: DimExpression -> DimExpression -> Bool
+strictlySimplerDimsBasis (DimExpression l) (DimExpression r)
+             = comp (map fst l) (map fst r)
+ where comp _ [] = False
+       comp [] _ = True
+       comp (l:ls) (r:rs)
+        | l<r   = False
+        | l>r   = comp (l:ls) rs
+        | l==r  = comp ls rs
+
+
+traceAsValue :: DimTracer -> [DimExpression]
+traceAsValue (DimlessConstant _) = return mempty
+traceAsValue (VardimVar a) = return (primDimExpr $ PhqFnParamVal a)
+traceAsValue (DimEqualities _ v) = v >>= traceAsValue
+traceAsValue (DimtraceProduct l) = map mconcat . sequence $ map traceAsValue l
+traceAsValue (DimtracePower a q) = map (expExpMap (q*)) $ traceAsValue a
 
 (//-) :: DimExpression -> DimExpression -> DimExpression
 a //- b = a <> invDimExp b
@@ -253,26 +346,37 @@ nubDimExprs = map head . group . sort
 
 
 dimExpressionsFor :: PhqIdf -> DimTracer -> [DimExpression]
-dimExpressionsFor idf = go $ primDimExpr PhqFnResultVal
- where go :: DimExpression -> DimTracer -> [DimExpression]
-       go rev (DimEqualAnd (ida,idb) also)
-        = nubDimExprs $ go rev also ++ go (traceAsValue ida) idb ++ go (traceAsValue idb) ida
-       go rev (DimtraceProduct l)
-        = nubDimExprs $ l >>= \way -> go (rev<>invprod<>traceAsValue way) way
-            where invprod = invDimExp . mconcat $ map traceAsValue l
-       go rev (DimtracePower p q) = go (expExpMap(/q)rev) p
-       go rev rest
-        | (q,p) <- extractFixValExp (PhqFnParamVal idf) $ traceAsValue rest //- rev
-        , q /= 0       = [expExpMap(/(-q))p]
-        | otherwise    = []
+dimExpressionsFor idf e = go e $ primDimExpr PhqFnResultVal
+ where go :: DimTracer -> DimExpression -> [DimExpression]
+       go (DimEqualities mutualEqs resEqs) rev
+        = nubDimExprs $ ((`go`rev) =<< resEqs) ++ ( do
+                   (ida,idb) <- mutualEqs
+                   (go idb =<< traceAsValue ida)
+                                    ++ (go ida =<< traceAsValue idb) )
+       go e@(DimtraceProduct l) rev = nubDimExprs $ do
+            way <- l
+            value <- traceAsValue way
+            invprod <- map invDimExp $ traceAsValue e
+            go way $ rev<>invprod<>value
+       go (DimtracePower p q) rev = go p $ expExpMap(/q) rev
+       go rest rev = do
+            value <- traceAsValue rest
+            let (q,p) = extractFixValExp (PhqFnParamVal idf) $ value //- rev
+            guard (q /= 0)
+            [expExpMap(/(-q))p]
+
+
+relevantDimExprsFor :: PhqIdf -> DimTracer -> [DimExpression]
+relevantDimExprsFor idf = prune . cplxtySort . dimExpressionsFor idf
+ where cplxtySort = sortBy (compare `on` negate . dimExprnComplexity)
+       prune [] = []
+       prune (e:es)
+        | any(`strictlySimplerDimsBasis`e)es  = prune es
+        | otherwise                           = e : prune es
 
 
 
 
-
-
-
-type CXXExpression = String
 
 newtype CXXFunc = CXXFunc {wrapCXXFunc :: CXXExpression -> CXXExpression}
 newtype CXXInfix = CXXInfix {wrapCXXInfix :: CXXExpression -> CXXExpression -> CXXExpression}
@@ -356,6 +460,14 @@ instance Floating PhqFuncTerm where
   acosh = error "acosh of physquantities not currently implemented."
   atanh = error "atanh of physquantities not currently implemented."
 
+
+
+
+-- 'seqPrunePhqFuncTerm' could be implemented much more efficiently by replacing
+-- the lists with hash tables. This has low priority, since any function complicated
+-- enough for this to take noteworthy time would always take yet a lot more time
+-- when used with the cqtx algorithms.
+
 -- instance Hashable PhqFuncTerm where
 --   hash (PhqFnDimlessConst a) = hash"DimlessConst"`combine`hash a
 --   hash (PhqFnPhysicalConst a) = hash"PhysicalConst"`combine`hash a
@@ -419,7 +531,7 @@ seqPrunePhqFuncTerm = prune . reverse . go []
                | n`elem`doomed  = Nothing
                | otherwise      = Just (n, inlineIn e)
               
-              inlineIn e@(PhqFnTempRef n')
+              inlineIn (PhqFnTempRef n')
                | n'`elem`doomed = inlineIn $ l!!n'
               inlineIn (PhqFnFuncApply f e) = PhqFnFuncApply f $ inlineIn e
               inlineIn (PhqFnInfixApply f a b) = PhqFnInfixApply f (inlineIn a) (inlineIn b)
@@ -430,8 +542,8 @@ seqPrunePhqFuncTerm = prune . reverse . go []
               
               referingTo n = filter (refersTo n) l
               refersTo n (PhqFnTempRef n') = n==n'
-              refersTo n (PhqFnFuncApply f e) = refersTo n e
-              refersTo n (PhqFnInfixApply f a b) = refersTo n a || refersTo n b
+              refersTo n (PhqFnFuncApply _ e) = refersTo n e
+              refersTo n (PhqFnInfixApply _ a b) = refersTo n a || refersTo n b
               refersTo _ _ = False
 
  
@@ -441,31 +553,12 @@ calculateDimExpression (DimExpression decomp) = product $ map phqfImplement deco
  where phqfImplement (e, x) = implement e ** fromRational x
        implement (PhqFnParamVal pr) = PhqFnParameter pr
        implement PhqFnResultVal = PhqFnPhysicalConst "desiredret"
+       implement PhqDimlessConst = PhqFnDimlessConst 1
 
 
 
 
 
-
-newtype LinesBuildup = LinesBuildup {builtupLines :: [String]->[String]}
-instance Monoid LinesBuildup where
-  mempty = LinesBuildup id
-  mappend (LinesBuildup a) (LinesBuildup b) = LinesBuildup (a.b)
-
-linesBuildMap :: (String->String) -> LinesBuildup -> LinesBuildup
-linesBuildMap f (LinesBuildup a) = LinesBuildup (map f (a[]) ++)
-  
-type CXXCode = Writer LinesBuildup
-
-instance Show (CXXCode()) where
-  show = unlines . ("do":) . map printout . ($[]) . builtupLines . execWriter
-   where printout l = "   cxxLine "++show l
-
-cxxLine :: String -> CXXCode()
-cxxLine s = tell $ LinesBuildup (s:)
-
-cxxIndent :: Int -> CXXCode a -> CXXCode a
-cxxIndent n = censor $ linesBuildMap (replicate n ' '++)
 
 
 cqtxTermImplementation :: CXXExpression -> PhqFuncTerm -> CXXCode CXXExpression

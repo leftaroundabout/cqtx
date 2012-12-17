@@ -1,0 +1,17 @@
+Name:                cqtx-hsmacros
+Version:             0.1
+Category:            media
+Synopsis:            Haskell preprocessing / code generation for the cqtx C++ library
+License:             GPL-3
+License-file:        ../COPYING
+Author:              Justus Sagemüller
+Maintainer:          (@)sagemuej$smail.uni-koeln.de
+Build-Type:          Simple
+Cabal-Version:       >=1.2
+
+Library
+  Build-Depends:     base>=4.5
+                     , mtl, random
+  Exposed-modules:   CodeGen.CXX.Code CodeGen.CXX.Cqtx.PhqFn
+  ghc-options:       -O 
+     -- -Wall
