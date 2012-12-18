@@ -1162,6 +1162,7 @@ if(0)cout<< "Calc multiplicity.\nAverage dist: " << avgd
                                                      //    (n=minmzstate.size()) to be acknowledged
                                                     //     as a statistically significant
                                                    //      solution to the minimization problem.
+      return true;
       for (unsigned i = 0; i<minmzstate.size(); ++i) {
         measure m = minmzstate, backup=minmzstate;
         if(msgstream) (*msgstream) << "Evolution-optimized measure:\n" << m;
@@ -1171,12 +1172,14 @@ if(0)cout<< "Calc multiplicity.\nAverage dist: " << avgd
         do {
           toosmall = false;
           int runintoconstraint=0;
-          if(msgstream) (*msgstream) << "Range expanded, now\n" << minmzstate << std::endl;
+          bool echostate = false;
+          if(msgstream) {for(unsigned j=0;j<17;++j) if (killr==1u<<j) echostate=true;}
+          if(echostate) (*msgstream) << "Range expanded, now\n" << minmzstate << std::endl;
           for (int s=-1; s!=0; s=(s<0)? 1 : 0) {
             m[i] = minmzstate[i] + s*minmzstate[i].error();
-            if(msgstream) (*msgstream) << "One of the err margins:\n" << m;
-            if(msgstream) (*msgstream) << "with fn value " << f(m) << std::endl;
-            if(msgstream) (*msgstream) << "     (best achieved was " << bestachievmt << ")" << std::endl;
+            if(echostate) (*msgstream) << "One of the err margins:\n" << m;
+            if(echostate) (*msgstream) << "with fn value " << f(m) << std::endl;
+            if(echostate) (*msgstream) << "     (best achieved was " << bestachievmt << ")" << std::endl;
             if (!constrained(m)) {                   //that means there is no error-significant surrounding
               if (runintoconstraint++) return false;// to the prepared solution inside the allowed range 
              }else if (f(m) < bestachievmt*std::pow(2,1./minmzstate.size())) {
