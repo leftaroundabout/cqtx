@@ -95,10 +95,28 @@ class phmsq_function_base{
 typedef phmsq_function_base<physquantity> phmsq_function;
 
 
-QTeXdiagmaster &QTeXdiagmaster::plot_phmsq_function(const phmsq_function &f, phq_interval rng, const measure &consts, int res, const QTeXgrcolor &cl, std::string nfname) {
+
+struct unsharpPhmsqFunction : phmsq_function {
+  virtual auto unsharp_range()const -> measure =0;
+  virtual auto eval_collapsed(const measure&)const
+                 -> physquantity  =0;
+};
+
+QTeXdiagmaster &QTeXdiagmaster::plot_phmsq_function(const phmsq_function &f_orig, phq_interval rng, const measure &consts_init, int res, const QTeXgrcolor &cl, std::string nfname) {
 
   make_safe_qcvfilename(nfname);
   QTeXgrofstream crvfile(nfname);
+  
+  measure consts = consts_init;
+  if(auto unsharp_f = dynamic_cast<const unsharpPhmsqFunction*>(&f_orig))
+    consts.append(unsharp_f->unsharp_range());
+  
+  auto f = [&](const measure& x){
+             if(auto unsharp_f = dynamic_cast<const unsharpPhmsqFunction*>(&f_orig))
+                   return unsharp_f->eval_collapsed(x);
+              else return f_orig(x);
+           };
+  
   if (!crvfile) {cout<<"Bad filename \"" << nfname << "\""; abort();}
 
   if (rng.width()==0) return *this;     // Nothing to plot on a vanishing interval!
@@ -1162,7 +1180,6 @@ if(0)cout<< "Calc multiplicity.\nAverage dist: " << avgd
                                                      //    (n=minmzstate.size()) to be acknowledged
                                                     //     as a statistically significant
                                                    //      solution to the minimization problem.
-      return true;
       for (unsigned i = 0; i<minmzstate.size(); ++i) {
         measure m = minmzstate, backup=minmzstate;
         if(msgstream) (*msgstream) << "Evolution-optimized measure:\n" << m;
@@ -1272,17 +1289,26 @@ if(0)cout<< "Calc multiplicity.\nAverage dist: " << avgd
 
 
                                                       COPYABLE_PDERIVED_CLASS(/*
-class*/fittedFunction,/*: public*/phmsq_function) {
+class*/fittedFunction,/*: public*/unsharpPhmsqFunction) {
   std::unique_ptr<fittable_phmsqfn> fittable_fn;
   measure fittedparams;
   fittedFunction(std::unique_ptr<fittable_phmsqfn> fittable_fn, measure fittedparams)
     : fittable_fn(std::move(fittable_fn)), fittedparams(std::move(fittedparams)) {}
+  
  public:
   auto result() -> const measure& {
     return fittedparams;
   }
-  virtual physquantity operator() (const measure& thisparams) const override {
+  virtual auto operator() (const measure& thisparams) const override
+              -> physquantity {
     measure allparams = fittedparams.combined_with(thisparams);
+    return (*fittable_fn)(allparams);
+  }
+  virtual auto unsharp_range()const override -> measure {
+    return fittedparams;
+  }
+  virtual auto eval_collapsed(const measure& allparams) const override
+              -> physquantity {
     return (*fittable_fn)(allparams);
   }
   
