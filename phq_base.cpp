@@ -677,6 +677,25 @@ class physquantity {                           //Klasse f\"ur physikalische Gr\"
   physquantity werror(const physquantity &nerr) const { return(physquantity(*this).seterror(nerr));  }
   physquantity werror(int nerr) const { return(physquantity(*this).seterror(nerr));  }
   physquantity plusminusrel(const float &nerr) const { return(physquantity(*this).seterror(physquantity(*this)*nerr));  }
+  physquantity& normalize() { *this /= this->werror(0); return *this; }
+  physquantity normalized()const { return physquantity(*this).normalize(); }
+  
+  physquantity& add_rel_uncertainty_of(const physquantity& runcrt_src) {
+    double src_reluncertain, my_reluncertain;
+    if(!runcrt_src.tunit)
+      src_reluncertain = runcrt_src.myError.valincgs / runcrt_src.valincgs;
+     else
+      src_reluncertain = runcrt_src.myError.valintu / runcrt_src.valintu;
+    if(!tunit){
+      my_reluncertain = myError.valincgs / valincgs;
+      myError.valincgs = valincgs * std::hypot(my_reluncertain, src_reluncertain);
+     }else{
+      my_reluncertain = myError.valintu / valintu;
+      myError.valintu = valintu * std::hypot(my_reluncertain, src_reluncertain);
+    }
+    return *this;
+  }
+  
   physquantity u_errorbord() const{  return(*this + error());  }
   physquantity l_errorbord() const{  return(*this - error());  }
   physquantity &scale_error(double lambda) {
