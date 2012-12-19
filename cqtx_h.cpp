@@ -453,6 +453,11 @@ class measure : public std::vector<physquantity> {
         deftgt -> let(tg, ldf*real1);
       return deftgt->called(dsrdnames.front());
     }
+    measure& as_in(const measure& adaptfrom) {
+      for(auto&tg : dsrdnames)
+        deftgt -> let(tg, adaptfrom[tg]);
+      return *deftgt;
+    }
     
     struct unitfree {
       letdefobj* defobj;
