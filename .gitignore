@@ -2,6 +2,7 @@
 *.slo
 *.lo
 *.o
+*/dist/package.conf.inplace
 
 # Compiled Dynamic libraries
 *.so

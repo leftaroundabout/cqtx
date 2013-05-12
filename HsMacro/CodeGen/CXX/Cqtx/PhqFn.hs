@@ -101,6 +101,16 @@ phqFn :: forall paramLabelsList paramValsList
     -> (forall x. PhqfnDefining x
              => paramValsList x -> x)  -- ^ Function definition, as a lambda
     -> CqtxCode()                      -- ^ C++ class and object code for a cqtx fittable physical function corresponding to the given definition.
+
+
+-- phqMultiIdFn :: forall paramLabelsList paramValsList pIndexLabelsList pIndexIdsList
+--  . EquilenLists paramLabelsList paramValsList
+--    => String
+--     -> pIndexLabelsList String
+--     -> paramLabelsList String
+--     -> (forall x. PhqfnDefining x
+--              => paramValsList x -> x)
+--     -> CqtxCode()
 phqFn fnName defaultLabels function = ReaderT $ codeWith where
  codeWith config = do
      cxxLine     $ "                                                                COPYABLE_PDERIVED_CLASS(/*"
@@ -401,6 +411,7 @@ data PhqFuncTerm = PhqFnDimlessConst Double
                  | PhqFnParameter PhqIdf
                  | PhqFnFuncApply CXXFunc PhqFuncTerm
                  | PhqFnInfixApply CXXInfix PhqFuncTerm PhqFuncTerm
+                 | PhqFnInfixFoldOverIndexer PhqVarIndexer CXXInfix PhqFuncTerm PhqFuncTerm
                  deriving (Eq)
                  
 cxxFuncPhqApply :: CXXExpression -> PhqFuncTerm -> PhqFuncTerm
@@ -584,13 +595,39 @@ withDefaultCqtxConfig = flip runReaderT ()
 
 
 
+newtype IdxablePhqDefVar x
+ = IdxablePhqDefVar {
+     indexisePhqDefVar :: PhqVarIndexer -> x }
+
+data PhqVarIndexer = PhqVarIndexer Int String deriving(Eq)
 
 
-class (Floating a) => PhqfnDefining a
+class (Floating a) => PhqfnDefining a where
+  sumOverIdx :: PhqVarIndexer
+      -> ((IdxablePhqDefVar a->a) -> a) -> a
 
-instance PhqfnDefining PhqFuncTerm
-instance PhqfnDefining DimTracer
+instance PhqfnDefining PhqFuncTerm where
+  sumOverIdx i summand
+      = PhqFnInfixFoldOverIndexer i (cxxInfix"+") 0 
+          . forbidDupFold i "sum"
+          . summand $ \(IdxablePhqDefVar e) -> e i
+         
 
+instance PhqfnDefining DimTracer where
+  sumOverIdx i summand = summand $
+      \(IdxablePhqDefVar e) -> e i
+
+
+
+
+forbidDupFold :: PhqVarIndexer -> String -> PhqFuncTerm -> PhqFuncTerm
+forbidDupFold i@(PhqVarIndexer _ nmm) fnm = go
+ where go(PhqFnInfixFoldOverIndexer i' ifx ini tm)
+        | i'==i      = error $ "Duplicate "++fnm++" over index "++nmm
+        | otherwise  = PhqFnInfixFoldOverIndexer i' ifx (go ini) (go tm)
+       go(PhqFnFuncApply f tm) = PhqFnFuncApply f $ go tm
+       go(PhqFnInfixApply ifx l r) = PhqFnInfixApply ifx (go l) (go r)
+       go e = e
 
 
 
