@@ -15,6 +15,7 @@
 {-# LANGUAGE PatternGuards         #-}
 {-# LANGUAGE TupleSections         #-}
 {-# LANGUAGE Rank2Types            #-}
+{-# LANGUAGE ImpredicativeTypes    #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 -- {-# LANGUAGE FunctionalDependencies#-}
 {-# LANGUAGE FlexibleInstances     #-}
@@ -103,17 +104,21 @@ phqFn :: forall paramsList . IsolenList paramsList
     -> (forall x. PhqfnDefining x
              => paramsList x -> x)  -- ^ Function definition, as a lambda
     -> CqtxCode()                      -- ^ C++ class and object code for a cqtx fittable physical function corresponding to the given definition.
+phqFn fnName sclLabels function
+  = phqFlatMultiIdFn fnName sclLabels P $ \(~P) -> (P, \scl _ -> function scl)
 
 
--- phqMultiIdFn :: forall paramLabelsList paramValsList pIndexLabelsList pIndexIdsList
---  . IsolenList paramLabelsList paramValsList
---    => String
---     -> pIndexLabelsList String
---     -> paramLabelsList String
---     -> (forall x. PhqfnDefining x
---              => paramValsList x -> x)
---     -> CqtxCode()
-phqFn fnName defaultLabels function = ReaderT $ codeWith where
+phqFlatMultiIdFn :: forall scalarPrmsList indexerList indexedPrmsList
+ . (IsolenList scalarPrmsList, IsolenList indexerList, IsolenList indexedPrmsList)
+   => String
+    -> scalarPrmsList String
+    -> indexerList (String, Maybe Int)
+    -> ( indexerList PhqVarIndexer ->
+          ( indexedPrmsList (String, PhqVarIndexer)
+          , forall x. PhqfnDefining x
+             => scalarPrmsList x -> indexedPrmsList (IdxablePhqDefVar x) -> x) )
+    -> CqtxCode()
+phqFlatMultiIdFn fnName sclLabels ixerList indexedFn = ReaderT $ codeWith where
  codeWith config = do
      cxxLine     $ "                                                                COPYABLE_PDERIVED_CLASS(/*"
      cxxLine     $ "class*/"++className++",/*: public */fittable_phmsqfn) {"
@@ -124,6 +129,13 @@ phqFn fnName defaultLabels function = ReaderT $ codeWith where
                       functionEval
      cxxLine     $ "} " ++ fnName ++ ";"
    where 
+         defaultLabels :: scalarPrmsList String
+         defaultLabels = sclLabels
+         
+         function :: forall x . PhqfnDefining x => scalarPrmsList x -> x
+         function = let (_,f) = indexedFn undefined
+                    in \sclP -> f sclP undefined
+ 
          fnResultTerm :: PhqFuncTerm
          fnResultTerm = function $
                fmap (\i->PhqFnParameter $ PhqIdf i) parameterIds
@@ -205,7 +217,7 @@ phqFn fnName defaultLabels function = ReaderT $ codeWith where
          
          parameterIdsList = fmap snd $ perfectZip defaultLabels parameterIds 
          
-         parameterIds :: paramsList Int
+         parameterIds :: scalarPrmsList Int
          parameterIds = buildEquilenList defaultLabels (succ) 0
          idxedDefaultLabels = fmap swap $ perfectZip defaultLabels parameterIds 
          nParams = isoLength idxedDefaultLabels
