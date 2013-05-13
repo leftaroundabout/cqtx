@@ -51,21 +51,24 @@ module CodeGen.CXX.Cqtx.PhqFn( phqFn
                              , module CodeGen.CXX.Code
                              , CqtxCode
                              , CqtxConfig, withDefaultCqtxConfig
+                             , PhqfnDefining(..)
                                 -- * Length-indexed lists
-                             , EquilenEnd(P), EquilenCons(..)
+                             , IsolenEnd(P), IsolenCons(..)
                              ) where
 import CodeGen.CXX.Code
 
-import Control.Monad
-import Control.Monad.Writer
-import Control.Monad.Reader
+import Control.Monad hiding (forM_)
+import Control.Monad.Writer hiding (forM_)
+import Control.Monad.Reader hiding (forM_)
 
 import Data.Function
-import Data.List
+import Data.List (sort, sortBy, intersperse, group)
 import Data.Monoid
 import Data.Ratio
 import Data.Maybe
 import Data.Tuple
+import Data.Foldable
+import Prelude hiding (foldr, concat, sum, product, any, elem)
 -- import Data.Hashable
 -- import Data.HashMap
 
@@ -94,17 +97,16 @@ import Data.Tuple
 -- 
 -- Avoidance of duplicate calculation, as well as rudimentary optimisation, is taken
 -- care for by this preprocessor.
-phqFn :: forall paramLabelsList paramValsList
- . EquilenLists paramLabelsList paramValsList
+phqFn :: forall paramsList . IsolenList paramsList
    => String                           -- ^ Name of the resulting phqFn C++ object
-    -> paramLabelsList String          -- ^ Default labels of the parameters
+    -> paramsList String          -- ^ Default labels of the parameters
     -> (forall x. PhqfnDefining x
-             => paramValsList x -> x)  -- ^ Function definition, as a lambda
+             => paramsList x -> x)  -- ^ Function definition, as a lambda
     -> CqtxCode()                      -- ^ C++ class and object code for a cqtx fittable physical function corresponding to the given definition.
 
 
 -- phqMultiIdFn :: forall paramLabelsList paramValsList pIndexLabelsList pIndexIdsList
---  . EquilenLists paramLabelsList paramValsList
+--  . IsolenList paramLabelsList paramValsList
 --    => String
 --     -> pIndexLabelsList String
 --     -> paramLabelsList String
@@ -153,7 +155,7 @@ phqFn fnName defaultLabels function = ReaderT $ codeWith where
             cxxLine     $ "}"
          
          dimFetchDeclares :: CXXCode [(Int,CXXExpression)]
-         dimFetchDeclares = forM parameterIdsList $ \i -> do
+         dimFetchDeclares = forM (toList parameterIdsList) $ \i -> do
             let functionName = "example_parameter"++show i++"value"
             let resultOptions = relevantDimExprsFor (PhqIdf i) fnDimTrace
             
@@ -201,12 +203,12 @@ phqFn fnName defaultLabels function = ReaderT $ codeWith where
                   cxxLine  $ "argdrfs["++show n++"] = "++show label++";"
             cxxLine     $ "}"
          
-         parameterIdsList = map snd $ perfectZip defaultLabels parameterIds 
+         parameterIdsList = fmap snd $ perfectZip defaultLabels parameterIds 
          
-         parameterIds :: paramValsList Int
+         parameterIds :: paramsList Int
          parameterIds = buildEquilenList defaultLabels (succ) 0
-         idxedDefaultLabels = map swap $ perfectZip defaultLabels parameterIds 
-         nParams = length idxedDefaultLabels
+         idxedDefaultLabels = fmap swap $ perfectZip defaultLabels parameterIds 
+         nParams = isoLength idxedDefaultLabels
 
 
 
@@ -632,35 +634,40 @@ forbidDupFold i@(PhqVarIndexer _ nmm) fnm = go
 
 
 
-class (Functor l1, Functor l2) => EquilenLists l1 l2 where
-  perfectZip :: l1 a -> l2 b -> [(a,b)]
-  buildEquilenList :: l1 a -> (b->b) -> b -> l2 b
---   singleList :: l1 a -> [a]
---   unfoldToMatch :: l1 a -> (b -> (c,b)) -> b -> l2 c
+class (Functor l, Foldable l) => IsolenList l where
+  perfectZip :: l a -> l b -> l (a,b)
+  buildEquilenList :: l a -> (b->b) -> b -> l b
+  isoLength :: l a -> Int
+  isoLength = length . toList
 
-data EquilenEnd a = P deriving (Show)
+data IsolenEnd a = P deriving (Show)
 infixr 5 :.
-data EquilenCons l a = a :. l a deriving (Show)
+data IsolenCons l a = a :. l a deriving (Show)
 
-instance Functor EquilenEnd where
+instance Functor IsolenEnd where
   fmap _ P = P
-instance (Functor l) => Functor (EquilenCons l) where
+instance (Functor l) => Functor (IsolenCons l) where
   fmap f (x:.xs) = f x :. fmap f xs
 
-instance EquilenLists EquilenEnd EquilenEnd where
-  perfectZip P P = []
+instance Foldable IsolenEnd where
+  foldr _ = const
+instance (Foldable l) => Foldable (IsolenCons l) where
+  foldr f ini (x:.xs) = x `f` foldr f ini xs
+
+instance IsolenList IsolenEnd where
+  perfectZip P P = P
   buildEquilenList P _ _ = P
 --   singleList P = []
 --   unfoldToMatch P _ _ = P
   
-instance (EquilenLists l1 l2) => EquilenLists (EquilenCons l1) (EquilenCons l2) where
-  perfectZip (x:.xs) (y:.ys) = (x,y) : perfectZip xs ys
+instance (IsolenList l) => IsolenList (IsolenCons l) where
+  perfectZip (x:.xs) (y:.ys) = (x,y) :. perfectZip xs ys
   buildEquilenList (_:.xs) f s = s :. buildEquilenList xs f (f s)
 --   singleList (x:.xs) = x:xs
 --   unfoldToMatch (_:.xs) uff s = let (y,s') = uff s
 --                                 in  y :. unfoldToMatch xs uff s'
 
-instance EquilenLists [] [] where   -- obviously unsafe
+instance IsolenList [] where   -- obviously unsafe
   perfectZip = zip
   buildEquilenList [] _ _ = []
   buildEquilenList (_:xs) f s = s : buildEquilenList xs f (f s)
