@@ -93,8 +93,7 @@ import Prelude hiding (foldr, concat, sum, product, any, elem)
 -- >                   -> let q = (x-x0)/sigma in  a * exp(-0.5 * q^2) )
 -- 
 -- The use of the type-determined–length lists makes it impossible to accidentally
--- give different numbers of parameter bindings and -labels, but using ordinary lists
--- is also possible.
+-- give different numbers of parameter bindings and -labels.
 -- 
 -- Avoidance of duplicate calculation, as well as rudimentary optimisation, is taken
 -- care for by this preprocessor.
@@ -118,7 +117,7 @@ phqFlatMultiIdFn :: forall scalarPrmsList indexerList indexedPrmsList
           , forall x. PhqfnDefining x
              => scalarPrmsList x -> indexedPrmsList (IdxablePhqDefVar x) -> x) )
     -> CqtxCode()
-phqFlatMultiIdFn fnName sclLabels ixerList indexedFn = ReaderT $ codeWith where
+phqFlatMultiIdFn fnName sclLabels ixerLabels indexedFn = ReaderT $ codeWith where
  codeWith config = do
      cxxLine     $ "                                                                COPYABLE_PDERIVED_CLASS(/*"
      cxxLine     $ "class*/"++className++",/*: public */fittable_phmsqfn) {"
@@ -132,8 +131,11 @@ phqFlatMultiIdFn fnName sclLabels ixerList indexedFn = ReaderT $ codeWith where
          defaultLabels :: scalarPrmsList String
          defaultLabels = sclLabels
          
+         indexers :: indexerList PhqVarIndexer
+         indexers = perfectZipWith PhqVarIndexer (enumFrom' 0) ixerLabels
+         
          function :: forall x . PhqfnDefining x => scalarPrmsList x -> x
-         function = let (_,f) = indexedFn undefined
+         function = let (_,f) = indexedFn indexers
                     in \sclP -> f sclP undefined
  
          fnResultTerm :: PhqFuncTerm
@@ -218,7 +220,7 @@ phqFlatMultiIdFn fnName sclLabels ixerList indexedFn = ReaderT $ codeWith where
          parameterIdsList = fmap snd $ perfectZip defaultLabels parameterIds 
          
          parameterIds :: scalarPrmsList Int
-         parameterIds = buildEquilenList defaultLabels (succ) 0
+         parameterIds = buildIsolenList defaultLabels (succ) 0
          idxedDefaultLabels = fmap swap $ perfectZip defaultLabels parameterIds 
          nParams = isoLength idxedDefaultLabels
 
@@ -647,10 +649,18 @@ forbidDupFold i@(PhqVarIndexer _ nmm) fnm = go
 
 
 class (Functor l, Foldable l) => IsolenList l where
+  perfectZipWith :: (a->b->c) -> l a -> l b -> l c
   perfectZip :: l a -> l b -> l (a,b)
-  buildEquilenList :: l a -> (b->b) -> b -> l b
+  buildIsolenList :: (b->b) -> b -> l b
   isoLength :: l a -> Int
   isoLength = length . toList
+  enumFrom' :: Enum a => a -> l a
+  enumFrom' = buildIsolenList succ
+
+perfectZip :: IsolenList l => l a -> l b -> l (a,b)
+perfectZip = perfectZipWith(,)
+
+
 
 data IsolenEnd a = P deriving (Show)
 infixr 5 :.
@@ -667,26 +677,22 @@ instance (Foldable l) => Foldable (IsolenCons l) where
   foldr f ini (x:.xs) = x `f` foldr f ini xs
 
 instance IsolenList IsolenEnd where
-  perfectZip P P = P
-  buildEquilenList P _ _ = P
---   singleList P = []
---   unfoldToMatch P _ _ = P
+  perfectZipWith _ P P = P
+  buildIsolenList _ _ = P
   
 instance (IsolenList l) => IsolenList (IsolenCons l) where
-  perfectZip (x:.xs) (y:.ys) = (x,y) :. perfectZip xs ys
-  buildEquilenList (_:.xs) f s = s :. buildEquilenList xs f (f s)
---   singleList (x:.xs) = x:xs
---   unfoldToMatch (_:.xs) uff s = let (y,s') = uff s
---                                 in  y :. unfoldToMatch xs uff s'
+  perfectZipWith f (x:.xs) (y:.ys) = f x y :. perfectZip xs ys
+  buildIsolenList f s = s :. buildIsolenList f (f s)
 
-instance IsolenList [] where   -- obviously unsafe
-  perfectZip = zip
-  buildEquilenList [] _ _ = []
-  buildEquilenList (_:xs) f s = s : buildEquilenList xs f (f s)
+
+-- instance IsolenList [] where   -- obviously unsafe
+--   perfectZipWith = zipWith
+--   buildIsolenList = iterate
+--   enumFrom' = enumFrom
 --   singleList = id
 --   unfoldToMatch [] _ _ = []
 --   unfoldToMatch (_:xs) uff s = let (y,s') = uff s
 --                                in  y : unfoldToMatch xs uff s'
 
 
--- buildEquilenList l1 f = unfoldToMatch l1 $ (\b->(b,b)) . f
+-- buildIsolenList l1 f = unfoldToMatch l1 $ (\b->(b,b)) . f
