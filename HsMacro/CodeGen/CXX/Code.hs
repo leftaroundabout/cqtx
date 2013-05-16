@@ -34,6 +34,7 @@ module CodeGen.CXX.Code( CXXExpression
                        , CXXCode
                        , cxxLine, cxxIndent
                        , cxxCodeString
+                       , makeSafeCXXIdentifier
                        , exportCXXinliningHeader
                        ) where
 
@@ -85,6 +86,18 @@ cxxCodeString = showBuildup . execWriter
  where showBuildup (LinesBuildup buf) = unlines $ buf []
 
 
+makeSafeCXXIdentifier :: CXXExpression -> CXXExpression
+makeSafeCXXIdentifier = killDoubleUscores . ensureLeadAlpha . map steam
+ where ensureLeadAlpha v@(c:cs)
+        | isAlpha c  = v
+        | otherwise  = "identifier_"++v
+       killDoubleUscores [] = []
+       killDoubleUscores ('_':'_':r) = killDoubleUscores $ '_':r
+       killDoubleUscores (c:cs) = c : killDoubleUscores cs
+       steam c | isAlphaNum c  = c
+               | otherwise     = '_'
+
+
 
 exportCXXinliningHeader :: FilePath -> CXXCode() -> IO()
 exportCXXinliningHeader hFile code = do
@@ -97,4 +110,4 @@ exportCXXinliningHeader hFile code = do
           code
           cxxLine $ "#endif"
         where inclGuardKey = guardOk_hname++"_"++showHex hash[]
-              guardOk_hname = map toUpper . filter isAlphaNum $ hFile
+              guardOk_hname = map toUpper $ makeSafeCXXIdentifier hFile

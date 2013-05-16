@@ -63,7 +63,7 @@ import Control.Monad.Writer hiding (forM_)
 import Control.Monad.Reader hiding (forM_)
 
 import Data.Function
-import Data.List (sort, sortBy, intersperse, group)
+import Data.List (sort, sortBy, intersperse, group, find)
 import Data.Monoid
 import Data.Ratio
 import Data.Maybe
@@ -104,7 +104,7 @@ phqFn :: forall paramsList . IsolenList paramsList
              => paramsList x -> x)  -- ^ Function definition, as a lambda
     -> CqtxCode()                      -- ^ C++ class and object code for a cqtx fittable physical function corresponding to the given definition.
 phqFn fnName sclLabels function
-  = phqFlatMultiIdFn fnName sclLabels P $ \(~P) -> (P, \scl _ -> function scl)
+  = phqFlatMultiIdFn fnName sclLabels P $ \P -> (P, \scl P -> function scl)
 
 
 phqFlatMultiIdFn :: forall scalarPrmsList indexerList indexedPrmsList
@@ -128,22 +128,26 @@ phqFlatMultiIdFn fnName sclLabels ixerLabels indexedFn = ReaderT $ codeWith wher
                       functionEval
      cxxLine     $ "} " ++ fnName ++ ";"
    where 
-         defaultLabels :: scalarPrmsList String
-         defaultLabels = sclLabels
+         function :: forall x . PhqfnDefining x 
+                      => scalarPrmsList x -> indexedPrmsList (IdxablePhqDefVar x) -> x
+         ixps :: indexedPrmsList (String, PhqVarIndexer)
          
-         indexers :: indexerList PhqVarIndexer
-         indexers = perfectZipWith PhqVarIndexer (enumFrom' 0) ixerLabels
-         
-         function :: forall x . PhqfnDefining x => scalarPrmsList x -> x
-         function = let (_,f) = indexedFn indexers
-                    in \sclP -> f sclP undefined
+         (ixps, function) = indexedFn indexers
  
          fnResultTerm :: PhqFuncTerm
-         fnResultTerm = function $
-               fmap (\i->PhqFnParameter $ PhqIdf i) parameterIds
+         fnResultTerm = function (fmap (\i->PhqFnParameter $ PhqIdf i) scalarParamIds)
+                                 (perfectZipWith (\vni (vnm, PhqVarIndexer ix inm) 
+                                          -> IdxablePhqDefVar $ q vni vnm ix inm)
+                                      ixableParamIds ixps)
+              where q vni vnm ix inm (PhqVarIndexer ix' inm')
+                     | ix'==ix    = PhqFnParameter $ PhqIdf vni
+                     | otherwise  = error $ "In HsMacro-defined phqfunction '"++fnName++"':\n"
+                                            " Using wrong indexer '"++inm'++"' (not adapted range!) \
+                                            \for indexing variable '"++vnm++"'.\n"
+                                            ++" Correct indexer would be '"++inm++"'."
          fnDimTrace :: DimTracer
-         fnDimTrace = function $
-               fmap (\i->VardimVar $ PhqIdf i) parameterIds
+         fnDimTrace = function (fmap (VardimVar . PhqIdf) scalarParamIds)
+                               (fmap (VardimVar . PhqIdf) ixableParamIds)
                
          functionEval :: CXXCode()
          functionEval = do
@@ -169,7 +173,7 @@ phqFlatMultiIdFn fnName sclLabels ixerLabels indexedFn = ReaderT $ codeWith wher
             cxxLine     $ "}"
          
          dimFetchDeclares :: CXXCode [(Int,CXXExpression)]
-         dimFetchDeclares = forM (toList parameterIdsList) $ \i -> do
+         dimFetchDeclares = forM (toList scalarParamIds) $ \i -> do
             let functionName = "example_parameter"++show i++"value"
             let resultOptions = relevantDimExprsFor (PhqIdf i) fnDimTrace
             
@@ -206,23 +210,54 @@ phqFlatMultiIdFn fnName sclLabels ixerLabels indexedFn = ReaderT $ codeWith wher
             cxxLine     $ "}"
             return (i,functionName)
          
+         rangesDecl :: CXXCode [CXXExpression]
+         rangesDecl = do
+             let rangeConstsNeeded = filter ((==head indizesPrefix) . head)
+                                                    $ toList ixableParamRanges
+             cxxLine $ "unsigned "
+                        ++ intercalate ", " rangeConstsNeeded ++ ";"
+             return rangeConstsNeeded
             
          className = fnName++"Function"
          
-         constructor = do
-            cxxLine     $ className ++"() {"
+         constructor :: [CXXExpression] -> CXXCode()
+         constructor cstrArgs = do
+            cxxLine     $ className ++"("++args++")"++initialisers++" {"
             cxxIndent 2 $ do
+               cxxLine     $ "unsigned nTot = "++++";"
                cxxLine     $ "argdrfs.resize("++show nParams++");"
                forM_ idxedDefaultLabels $ \(n,label) ->
                   cxxLine  $ "argdrfs["++show n++"] = "++show label++";"
             cxxLine     $ "}"
+          where args = intercalate ", " cstrArgs
+                initialisers
+                  | null cstrArgs  = ""
+                  | otherwise      = ": " ++ intercalate ", "
+                                      ( map (\a -> a ++ "("++a++")" ) cstrArgs )
          
-         parameterIdsList = fmap snd $ perfectZip defaultLabels parameterIds 
+         indexers :: indexerList PhqVarIndexer
+         indexers = perfectZipWith PhqVarIndexer (enumFrom' 0) ixerLabels
          
-         parameterIds :: scalarPrmsList Int
-         parameterIds = buildIsolenList defaultLabels (succ) 0
-         idxedDefaultLabels = fmap swap $ perfectZip defaultLabels parameterIds 
-         nParams = isoLength idxedDefaultLabels
+         scalarParamIds :: scalarPrmsList Int
+         scalarParamIds = enumFrom' 0
+         
+         ixableParamIds :: indexedPrmsList Int
+         ixableParamIds = enumFrom' nParams
+         
+         ixableParamRanges :: indexedPrmsList CXXExpression
+         ixableParamRanges = fmap (rngFind . snd) ixps
+          where rngFind (PhqVarIndexer ix _)
+                  = case ixerLabels !!@ ix of
+                     (_, Just n) = show n
+                     (name, _  ) = indizesPrefix ++ makeSafeCXXIdentifier name 
+                                         ++ indexRangePostfix
+         
+         indizesPrefix = "paramindex_"
+         indexRangePostfix = "_range"
+         
+         
+         idxedDefaultLabels = perfectZip scalarParamIds sclLabels
+         nParams = isoLength scalarParamIds
 
 
 
@@ -615,7 +650,10 @@ newtype IdxablePhqDefVar x
  = IdxablePhqDefVar {
      indexisePhqDefVar :: PhqVarIndexer -> x }
 
-data PhqVarIndexer = PhqVarIndexer Int String deriving(Eq)
+data PhqVarIndexer = PhqVarIndexer 
+  { phqVarIndexerId :: Int
+  , phqVarIndexerName :: String
+  } deriving(Eq)
 
 
 class (Floating a) => PhqfnDefining a where
@@ -650,12 +688,12 @@ forbidDupFold i@(PhqVarIndexer _ nmm) fnm = go
 
 class (Functor l, Foldable l) => IsolenList l where
   perfectZipWith :: (a->b->c) -> l a -> l b -> l c
-  perfectZip :: l a -> l b -> l (a,b)
   buildIsolenList :: (b->b) -> b -> l b
   isoLength :: l a -> Int
   isoLength = length . toList
   enumFrom' :: Enum a => a -> l a
   enumFrom' = buildIsolenList succ
+  (!!@) :: Int -> l a -> a
 
 perfectZip :: IsolenList l => l a -> l b -> l (a,b)
 perfectZip = perfectZipWith(,)
@@ -679,10 +717,15 @@ instance (Foldable l) => Foldable (IsolenCons l) where
 instance IsolenList IsolenEnd where
   perfectZipWith _ P P = P
   buildIsolenList _ _ = P
+  isoLength _ = 0
+  P !!@ (-1) = undefined
   
 instance (IsolenList l) => IsolenList (IsolenCons l) where
   perfectZipWith f (x:.xs) (y:.ys) = f x y :. perfectZip xs ys
   buildIsolenList f s = s :. buildIsolenList f (f s)
+  isoLength (_:.xs) = 1 + isoLength xs
+  (x:._) !!@ 0 = x
+  (_:.xs) !!@ n = xs !!@ (n-1)
 
 
 -- instance IsolenList [] where   -- obviously unsafe
