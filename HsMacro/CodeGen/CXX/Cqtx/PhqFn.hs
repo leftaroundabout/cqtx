@@ -117,7 +117,7 @@ phqFlatMultiIdFn :: forall scalarPrmsList indexerList indexedPrmsList
           , forall x. PhqfnDefining x
              => scalarPrmsList x -> indexedPrmsList (IdxablePhqDefVar x) -> x) )
     -> CqtxCode()
-phqFlatMultiIdFn fnName sclLabels ixerLabels indexedFn = ReaderT $ codeWith where
+phqFlatMultiIdFn fnName' sclLabels ixerLabels indexedFn = ReaderT $ codeWith where
  codeWith config = do
      cxxLine     $ "                                                                COPYABLE_PDERIVED_CLASS(/*"
      cxxLine     $ "class*/"++className++",/*: public */fittable_phmsqfn) {"
@@ -219,13 +219,21 @@ phqFlatMultiIdFn fnName sclLabels ixerLabels indexedFn = ReaderT $ codeWith wher
              return rangeConstsNeeded
             
          className = fnName++"Function"
+         fnName = makeSafeCXXIdentifier fnName'
+         
+         offsetMgr :: CXXCode()
+         offsetMgr = do
+            cxxLine     $ "void manage_offsets() {"
+            cxxIndent 2 $ do
+               cxxLine     $ "unsigned stackp = "++show(isoLength scalarParamIds)++";"
+               forM_ 
+            
          
          constructor :: [CXXExpression] -> CXXCode()
          constructor cstrArgs = do
             cxxLine     $ className ++"("++args++")"++initialisers++" {"
             cxxIndent 2 $ do
-               cxxLine     $ "unsigned nTot = "++++";"
-               cxxLine     $ "argdrfs.resize("++show nParams++");"
+               cxxLine     $ "manage_offsets();"
                forM_ idxedDefaultLabels $ \(n,label) ->
                   cxxLine  $ "argdrfs["++show n++"] = "++show label++";"
             cxxLine     $ "}"
@@ -233,7 +241,7 @@ phqFlatMultiIdFn fnName sclLabels ixerLabels indexedFn = ReaderT $ codeWith wher
                 initialisers
                   | null cstrArgs  = ""
                   | otherwise      = ": " ++ intercalate ", "
-                                      ( map (\a -> a ++ "("++a++")" ) cstrArgs )
+                                      ( map (\a -> a++"("++a++")" ) cstrArgs )
          
          indexers :: indexerList PhqVarIndexer
          indexers = perfectZipWith PhqVarIndexer (enumFrom' 0) ixerLabels
@@ -254,6 +262,7 @@ phqFlatMultiIdFn fnName sclLabels ixerLabels indexedFn = ReaderT $ codeWith wher
          
          indizesPrefix = "paramindex_"
          indexRangePostfix = "_range"
+         indexOffsetPostfix = "_offset"
          
          
          idxedDefaultLabels = perfectZip scalarParamIds sclLabels
