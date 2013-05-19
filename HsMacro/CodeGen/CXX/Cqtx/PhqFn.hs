@@ -121,7 +121,9 @@ phqFlatMultiIdFn fnName' sclLabels ixerLabels indexedFn = ReaderT $ codeWith whe
  codeWith config = do
      cxxLine     $ "                                                                COPYABLE_PDERIVED_CLASS(/*"
      cxxLine     $ "class*/"++className++",/*: public */fittable_phmsqfn) {"
-     helpers <- cxxIndent 2 $ dimFetchDeclares
+     helpers <- cxxIndent 2 
+                 $ dimFetchDeclares
+     cxxIndent 2 $ rangesDecl
      cxxLine     $ " public:"
      cxxIndent 2 $ do constructor
                       paramExamples helpers
@@ -130,15 +132,15 @@ phqFlatMultiIdFn fnName' sclLabels ixerLabels indexedFn = ReaderT $ codeWith whe
    where 
          function :: forall x . PhqfnDefining x 
                       => scalarPrmsList x -> indexedPrmsList (IdxablePhqDefVar x) -> x
-         ixps :: indexedPrmsList (String, PhqVarIndexer)
+         ixaParams :: indexedPrmsList (String, PhqVarIndexer)
          
-         (ixps, function) = indexedFn indexers
+         (ixaParams, function) = indexedFn indexers
  
          fnResultTerm :: PhqFuncTerm
          fnResultTerm = function (fmap (\i->PhqFnParameter $ PhqIdf i) scalarParamIds)
                                  (perfectZipWith (\vni (vnm, PhqVarIndexer ix inm) 
                                           -> IdxablePhqDefVar $ q vni vnm ix inm)
-                                      ixableParamIds ixps)
+                                      ixableParamIds ixaParams)
               where q vni vnm ix inm (PhqVarIndexer ix' inm')
                      | ix'==ix    = PhqFnParameter $ PhqIdf vni
                      | otherwise  = error $ "In HsMacro-defined phqfunction '"++fnName++"':\n"
@@ -210,13 +212,18 @@ phqFlatMultiIdFn fnName' sclLabels ixerLabels indexedFn = ReaderT $ codeWith whe
             cxxLine     $ "}"
             return (i,functionName)
          
-         rangesDecl :: CXXCode [CXXExpression]
+         rangesDecl :: CXXCode()
          rangesDecl = do
-             let rangeConstsNeeded = filter ((==head indizesPrefix) . head)
-                                                    $ toList ixableParamRanges
              cxxLine $ "unsigned "
                         ++ intercalate ", " rangeConstsNeeded ++ ";"
-             return rangeConstsNeeded
+             cxxLine $ "unsigned "
+                        ++ intercalate ", " offsetConstsNeeded ++ ";"
+         
+         rangeConstsNeeded = filter ( (==head indizesPrefix) . head )
+                               $ toList ixableParamRanges
+         offsetConstsNeeded = map ( (ixablePPrefix++) . (++ixaOffsetPostfix)
+                                     . makeSafeCXXIdentifier . fst           ) 
+                               $ toList ixaParams
             
          className = fnName++"Function"
          fnName = makeSafeCXXIdentifier fnName'
@@ -226,7 +233,11 @@ phqFlatMultiIdFn fnName' sclLabels ixerLabels indexedFn = ReaderT $ codeWith whe
             cxxLine     $ "void manage_offsets() {"
             cxxIndent 2 $ do
                cxxLine     $ "unsigned stackp = "++show(isoLength scalarParamIds)++";"
-               forM_ 
+               forM_ (zip offsetConstsNeeded $ toList ixableParamRanges)
+                       $ \(osc, rng) -> do
+                  cxxLine     $ osc ++ " = stackp; stackp += " ++ rng ++ ";"
+               cxxLine     $ "argdrfs.resize(stackp);"
+            cxxLine     $ "}"
             
          
          constructor :: [CXXExpression] -> CXXCode()
@@ -253,7 +264,7 @@ phqFlatMultiIdFn fnName' sclLabels ixerLabels indexedFn = ReaderT $ codeWith whe
          ixableParamIds = enumFrom' nParams
          
          ixableParamRanges :: indexedPrmsList CXXExpression
-         ixableParamRanges = fmap (rngFind . snd) ixps
+         ixableParamRanges = fmap (rngFind . snd) ixaParams
           where rngFind (PhqVarIndexer ix _)
                   = case ixerLabels !!@ ix of
                      (_, Just n) = show n
@@ -261,8 +272,9 @@ phqFlatMultiIdFn fnName' sclLabels ixerLabels indexedFn = ReaderT $ codeWith whe
                                          ++ indexRangePostfix
          
          indizesPrefix = "paramindex_"
+         ixablePPrefix = "ixaparam_"
          indexRangePostfix = "_range"
-         indexOffsetPostfix = "_offset"
+         ixaOffsetPostfix = "_offset"
          
          
          idxedDefaultLabels = perfectZip scalarParamIds sclLabels
