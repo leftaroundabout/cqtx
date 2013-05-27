@@ -83,7 +83,7 @@ cxxLine :: String -> CXXCode()
 cxxLine s = tell $ LinesBuildup (s:)
 
 modifyCXXLines :: ([String]->[String]) -> CXXCode a->CXXCode a
-modifyCXXLines f = censor $ \(LinesBuildup a) -> LinesBuildup $ f . a
+modifyCXXLines f = censor $ \(LinesBuildup a) -> LinesBuildup $ (f (a[]) ++)
 
 cxxIndent :: Int -> CXXCode a -> CXXCode a
 cxxIndent n = censor $ linesBuildMap (replicate n ' '++)
@@ -116,13 +116,13 @@ cxxConcatBlockIndented l = modifyCXXLines mdf
        
 
 procCXXCode :: (CXXExpression->CXXExpression) -> CXXCode a -> CXXCode a
-procCXXCode f = modifyCXXLines $ lines . f . unlines
+procCXXCode f = modifyCXXLines $ lines . f . init . unlines
 
 cxxCombineBlockIndented :: (CXXExpression->CXXExpression->CXXExpression)
                          -> CXXCode a    -> CXXCode b   -> CXXCode b
 cxxCombineBlockIndented f l = modifyCXXLines mdf
  where mdf [] = allLLs
-       mdf (fstRL:remaining) = lines $ (f `on` unlines) 
+       mdf (fstRL:remaining) = lines $ (f `on` init . unlines) 
                     (llInit ++ [lstLL]) 
                     (fstRL : map (postIndent++) remaining)
        allLLs = builtupLines (execWriter l) []

@@ -201,8 +201,7 @@ phqFlatMultiIdFn fnName' sclLabels ixerLabels indexedFn = ReaderT $ codeWith whe
                      cxxLine     $ "if(!thisdecomp_failed) {"
                      cxxIndent 2 $ do
                         result <- cqtxTermImplementation "constraints" (calculateDimExpression decomp)
-                        cxxPreFirstLine "physquantity result = ("
-                                            . cxxPostLastLine ");" $ result
+                        cxxSurround "physquantity result = " result ";"
                         cxxLine     $ "return result.werror(result);"
                      cxxLine     $ "}"
                   cxxLine     $ "}"
