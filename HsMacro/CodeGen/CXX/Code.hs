@@ -33,6 +33,9 @@
 module CodeGen.CXX.Code( CXXExpression
                        , CXXCode
                        , cxxLine, cxxIndent
+                       , cxxPreFirstLine, cxxPostLastLine, cxxSurround
+                       , procCXXCode, cxxConcatBlockIndented, cxxCombineBlockIndented
+                       , noCXXCode
                        , cxxCodeString
                        , makeSafeCXXIdentifier
                        , exportCXXinliningHeader
@@ -41,6 +44,8 @@ module CodeGen.CXX.Code( CXXExpression
 import Control.Monad
 import Control.Monad.Writer
 -- import Control.Monad.Reader
+
+import Control.Arrow
 
 import Data.Function
 import Data.List
@@ -77,13 +82,64 @@ instance Show (CXXCode()) where
 cxxLine :: String -> CXXCode()
 cxxLine s = tell $ LinesBuildup (s:)
 
+modifyCXXLines :: ([String]->[String]) -> CXXCode a->CXXCode a
+modifyCXXLines f = censor $ \(LinesBuildup a) -> LinesBuildup $ f . a
+
 cxxIndent :: Int -> CXXCode a -> CXXCode a
 cxxIndent n = censor $ linesBuildMap (replicate n ' '++)
 
+cxxPreFirstLine, cxxPostLastLine :: CXXExpression -> CXXCode a -> CXXCode a
+
+-- | Add something in front of the first line, and indent the remaining ones
+-- accordingly so the relative alignment is preserved.
+cxxPreFirstLine prefix = modifyCXXLines mdf
+ where mdf (fstL:remaining) = (prefix++fstL) : map (indentSpc++) remaining
+       indentSpc = map (const ' ') prefix
+
+cxxPostLastLine postfix = modifyCXXLines mdf
+ where mdf allLines = init allLines ++ [last allLines++postfix]
+
+cxxSurround :: CXXExpression -> CXXCode a -> CXXExpression -> CXXCode a
+cxxSurround l m r = cxxPreFirstLine l $ cxxPostLastLine r m
+
+cxxConcatBlockIndented :: CXXCode a -> CXXCode b -> CXXCode b
+cxxConcatBlockIndented l = modifyCXXLines mdf
+ where mdf [] = allLLs
+       mdf (fstRL:remaining) = llInit
+                                ++ [lstLL++fstRL]
+                                ++ map (postIndent++) remaining
+       allLLs = builtupLines (execWriter l) []
+       (llInit, lstLL) = case length allLLs of
+         0 -> ([], "")
+         n -> second head $ splitAt (n - 1) allLLs
+       postIndent = map (const ' ') lstLL
+       
+
+procCXXCode :: (CXXExpression->CXXExpression) -> CXXCode a -> CXXCode a
+procCXXCode f = modifyCXXLines $ lines . f . unlines
+
+cxxCombineBlockIndented :: (CXXExpression->CXXExpression->CXXExpression)
+                         -> CXXCode a    -> CXXCode b   -> CXXCode b
+cxxCombineBlockIndented f l = modifyCXXLines mdf
+ where mdf [] = allLLs
+       mdf (fstRL:remaining) = lines $ (f `on` unlines) 
+                    (llInit ++ [lstLL]) 
+                    (fstRL : map (postIndent++) remaining)
+       allLLs = builtupLines (execWriter l) []
+       (llInit, lstLL) = case length allLLs of
+         0 -> ([], "")
+         n -> second head $ splitAt (n - 1) allLLs
+       postIndent = "  " ++ map (const ' ') lstLL
+
+
+noCXXCode :: CXXCode()
+noCXXCode = tell $ LinesBuildup id
 
 cxxCodeString :: CXXCode() -> String
 cxxCodeString = showBuildup . execWriter
  where showBuildup (LinesBuildup buf) = unlines $ buf []
+
+
 
 
 makeSafeCXXIdentifier :: CXXExpression -> CXXExpression

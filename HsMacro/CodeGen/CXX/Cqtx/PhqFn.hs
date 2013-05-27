@@ -62,8 +62,10 @@ import Control.Monad hiding (forM_)
 import Control.Monad.Writer hiding (forM_)
 import Control.Monad.Reader hiding (forM_)
 
+import Control.Arrow
+
 import Data.Function
-import Data.List (sort, sortBy, intersperse, group, find)
+import Data.List (sort, sortBy, intersperse, intercalate, group, find)
 import Data.Monoid
 import Data.Ratio
 import Data.Maybe
@@ -86,7 +88,9 @@ import Prelude hiding (foldr, concat, sum, product, any, elem)
 -- we use universally-quantised arguments (which also suits the implementation very
 -- well).
 -- 
--- For example, the standard gaussian peak @A⋅exp(-(x-x₀)²/(2⋅σ²))@ could be defined thus:
+-- For example, the standard gaussian peak
+-- @&#x1d434;&#x22c5;exp(-(&#x1d465;-&#x1d465;&#x2080;)&#xb2;/(2&#x22c5;&#x3c3;&#xb2;))@
+-- could be defined thus:
 -- 
 -- >  phqFn "gaussPeak" ("x":."x_0":."\\sigma":."A":.P)
 -- >                 (\ ( x :.  x0 :.  sigma  :. a :.P)
@@ -124,14 +128,15 @@ phqFlatMultiIdFn fnName' sclLabels ixerLabels indexedFn = ReaderT $ codeWith whe
      helpers <- cxxIndent 2 
                  $ dimFetchDeclares
      cxxIndent 2 $ rangesDecl
+     cxxIndent 2 $ offsetMgr
      cxxLine     $ " public:"
      cxxIndent 2 $ do constructor
                       paramExamples helpers
                       functionEval
      cxxLine     $ "} " ++ fnName ++ ";"
    where 
-         function :: forall x . PhqfnDefining x 
-                      => scalarPrmsList x -> indexedPrmsList (IdxablePhqDefVar x) -> x
+--          function :: forall x . PhqfnDefining x 
+--                       => scalarPrmsList x -> indexedPrmsList (IdxablePhqDefVar x) -> x
          ixaParams :: indexedPrmsList (String, PhqVarIndexer)
          
          (ixaParams, function) = indexedFn indexers
@@ -143,13 +148,15 @@ phqFlatMultiIdFn fnName' sclLabels ixerLabels indexedFn = ReaderT $ codeWith whe
                                       ixableParamIds ixaParams)
               where q vni vnm ix inm (PhqVarIndexer ix' inm')
                      | ix'==ix    = PhqFnParameter $ PhqIdf vni
-                     | otherwise  = error $ "In HsMacro-defined phqfunction '"++fnName++"':\n"
-                                            " Using wrong indexer '"++inm'++"' (not adapted range!) \
-                                            \for indexing variable '"++vnm++"'.\n"
-                                            ++" Correct indexer would be '"++inm++"'."
+                     | otherwise  = error 
+                           $ "In HsMacro-defined phqfunction '"++fnName++"':\n\
+                             \ Using wrong indexer '"++inm'++"' (not adapted range!) \
+                             \for indexing variable '"++vnm++"'.\n\
+                             \ Correct indexer would be '"++inm++"'."
          fnDimTrace :: DimTracer
          fnDimTrace = function (fmap (VardimVar . PhqIdf) scalarParamIds)
-                               (fmap (VardimVar . PhqIdf) ixableParamIds)
+                               (fmap (\i -> IdxablePhqDefVar
+                                      $ \_ -> VardimVar $ PhqIdf i) ixableParamIds)
                
          functionEval :: CXXCode()
          functionEval = do
@@ -158,7 +165,7 @@ phqFlatMultiIdFn fnName' sclLabels ixerLabels indexedFn = ReaderT $ codeWith whe
 --                cxxLine     $ "std::cout << \"evaluate "++fnName++" with parameters\\n\""
 --                cxxLine     $ "          << parameters << std::endl;"
                result <- cqtxTermImplementation "parameters" fnResultTerm
-               cxxLine     $ "return ("++result++");"
+               cxxSurround  "return "result";"
             cxxLine     $ "}"
          
          paramExamples :: [(Int,CXXExpression)] -> CXXCode()
@@ -194,7 +201,8 @@ phqFlatMultiIdFn fnName' sclLabels ixerLabels indexedFn = ReaderT $ codeWith whe
                      cxxLine     $ "if(!thisdecomp_failed) {"
                      cxxIndent 2 $ do
                         result <- cqtxTermImplementation "constraints" (calculateDimExpression decomp)
-                        cxxLine     $ "physquantity result = ("++result++");"
+                        cxxPreFirstLine "physquantity result = ("
+                                            . cxxPostLastLine ");" $ result
                         cxxLine     $ "return result.werror(result);"
                      cxxLine     $ "}"
                   cxxLine     $ "}"
@@ -214,9 +222,11 @@ phqFlatMultiIdFn fnName' sclLabels ixerLabels indexedFn = ReaderT $ codeWith whe
          
          rangesDecl :: CXXCode()
          rangesDecl = do
-             cxxLine $ "unsigned "
+             when (not $ null rangeConstsNeeded) .
+               cxxLine $ "unsigned "
                         ++ intercalate ", " rangeConstsNeeded ++ ";"
-             cxxLine $ "unsigned "
+             when (not $ null offsetConstsNeeded) .
+               cxxLine $ "unsigned "
                         ++ intercalate ", " offsetConstsNeeded ++ ";"
          
          rangeConstsNeeded = filter ( (==head indizesPrefix) . head )
@@ -240,22 +250,23 @@ phqFlatMultiIdFn fnName' sclLabels ixerLabels indexedFn = ReaderT $ codeWith whe
             cxxLine     $ "}"
             
          
-         constructor :: [CXXExpression] -> CXXCode()
-         constructor cstrArgs = do
+         constructor :: CXXCode()
+         constructor = do
             cxxLine     $ className ++"("++args++")"++initialisers++" {"
             cxxIndent 2 $ do
                cxxLine     $ "manage_offsets();"
                forM_ idxedDefaultLabels $ \(n,label) ->
                   cxxLine  $ "argdrfs["++show n++"] = "++show label++";"
             cxxLine     $ "}"
-          where args = intercalate ", " cstrArgs
+          where cstrArgs = map undefined $ toList ixableParamIds
+                args = intercalate ", " cstrArgs
                 initialisers
                   | null cstrArgs  = ""
                   | otherwise      = ": " ++ intercalate ", "
                                       ( map (\a -> a++"("++a++")" ) cstrArgs )
          
          indexers :: indexerList PhqVarIndexer
-         indexers = perfectZipWith PhqVarIndexer (enumFrom' 0) ixerLabels
+         indexers = perfectZipWith PhqVarIndexer (enumFrom' 0) $ fmap fst ixerLabels
          
          scalarParamIds :: scalarPrmsList Int
          scalarParamIds = enumFrom' 0
@@ -267,20 +278,21 @@ phqFlatMultiIdFn fnName' sclLabels ixerLabels indexedFn = ReaderT $ codeWith whe
          ixableParamRanges = fmap (rngFind . snd) ixaParams
           where rngFind (PhqVarIndexer ix _)
                   = case ixerLabels !!@ ix of
-                     (_, Just n) = show n
-                     (name, _  ) = indizesPrefix ++ makeSafeCXXIdentifier name 
+                     (_, Just n) -> show n
+                     (name, _  ) -> indizesPrefix ++ makeSafeCXXIdentifier name 
                                          ++ indexRangePostfix
-         
-         indizesPrefix = "paramindex_"
-         ixablePPrefix = "ixaparam_"
-         indexRangePostfix = "_range"
-         ixaOffsetPostfix = "_offset"
          
          
          idxedDefaultLabels = perfectZip scalarParamIds sclLabels
          nParams = isoLength scalarParamIds
 
 
+indizesPrefix, ixablePPrefix, indexRangePostfix, ixaOffsetPostfix :: CXXExpression
+indizesPrefix = "paramindex_"
+ixablePPrefix = "ixaparam_"
+indexRangePostfix = "_range"
+ixaOffsetPostfix = "_offset"
+         
 
 
 
@@ -460,8 +472,8 @@ relevantDimExprsFor idf = prune . cplxtySort . dimExpressionsFor idf
 
 
 
-newtype CXXFunc = CXXFunc {wrapCXXFunc :: CXXExpression -> CXXExpression}
-newtype CXXInfix = CXXInfix {wrapCXXInfix :: CXXExpression -> CXXExpression -> CXXExpression}
+newtype CXXFunc = CXXFunc { wrapCXXFunc :: CXXExpression -> CXXExpression }
+newtype CXXInfix = CXXInfix { wrapCXXInfix :: CXXExpression -> CXXExpression -> CXXExpression }
 
 instance Eq CXXFunc where
   CXXFunc f==CXXFunc g  = f""==g""
@@ -479,11 +491,14 @@ type PhysicalCqtxConst = String
 
 data PhqFuncTerm = PhqFnDimlessConst Double
                  | PhqFnPhysicalConst PhysicalCqtxConst
-                 | PhqFnTempRef Int
+                 | PhqFnTempRef Int CXXExpression
                  | PhqFnParameter PhqIdf
                  | PhqFnFuncApply CXXFunc PhqFuncTerm
                  | PhqFnInfixApply CXXInfix PhqFuncTerm PhqFuncTerm
-                 | PhqFnInfixFoldOverIndexer PhqVarIndexer CXXInfix PhqFuncTerm PhqFuncTerm
+                 | PhqFnInfixFoldOverIndexer PhqVarIndexer
+                                             CXXInfix
+                                             PhqFuncTerm  -- init
+                                             PhqFuncTerm  -- summand
                  deriving (Eq)
                  
 cxxFuncPhqApply :: CXXExpression -> PhqFuncTerm -> PhqFuncTerm
@@ -564,9 +579,13 @@ instance Floating PhqFuncTerm where
 --                   migrateRs c = c
 
 
-
-seqPrunePhqFuncTerm :: PhqFuncTerm -> (PhqFuncTerm,[(Int,PhqFuncTerm)])
-seqPrunePhqFuncTerm = prune . reverse . go []
+-- | Obtain / eliminate common subexpressions.
+seqPrunePhqFuncTerm :: PhqFuncTerm             -- The original expression /e/, with possibly duplicate subexpressions.
+           -> ( PhqFuncTerm                    -- The \"trimmed\" version of /e/, in which duplicate expressions are replaced by variables, namely
+              , [(CXXExpression,PhqFuncTerm)]  -- The common-subexpr–variables, with the names that were given to them.
+              )
+seqPrunePhqFuncTerm = second ( map . first $ ("tmp"++) . show )
+                         . prune . reverse . go []
  where go :: [PhqFuncTerm] -> PhqFuncTerm -> [PhqFuncTerm]
        go acc term
         | (l, _:r) <- break((==term).expandRefs acc) acc 
@@ -577,33 +596,47 @@ seqPrunePhqFuncTerm = prune . reverse . go []
             = let acc' = go acc a
               in  PhqFnFuncApply f (refIn acc' $ length acc'-1) : acc'
        go acc x@(PhqFnInfixApply f a b)
+           = ifxGo acc x a b $ PhqFnInfixApply f
+       go acc x@(PhqFnInfixFoldOverIndexer ixd ifx fdInit fdand)
+--            = ifxGo acc x fdInit fdand $ PhqFnInfixFoldOverIndexer ixd ifx
+        | isPrimitive fdInit = x:acc
+        | otherwise
+            = let acc' = go acc fdInit
+              in  PhqFnInfixFoldOverIndexer ixd ifx (refIn acc' $ length acc'-1) fdand : acc'
+       go acc term = term : acc
+       
+       ifxGo :: [PhqFuncTerm] -> PhqFuncTerm -> PhqFuncTerm -> PhqFuncTerm
+                              -> ( PhqFuncTerm->PhqFuncTerm->PhqFuncTerm )
+                              -> [ PhqFuncTerm ]
+       ifxGo acc x a b recomb
         | isPrimitive a, isPrimitive b = x:acc
         | isPrimitive a
             = let acc' = go acc b
-              in  PhqFnInfixApply f a (refIn acc' $ length acc'-1) : acc'
+              in  recomb a (refIn acc' $ length acc'-1) : acc'
         | isPrimitive b
             = let acc' = go acc a
-              in  PhqFnInfixApply f (refIn acc' $ length acc'-1) b : acc'
+              in  recomb (refIn acc' $ length acc'-1) b : acc'
         | otherwise
             = let accL = go acc a
                   accR = go accL b
                   [nLhsRefs,nRhsRefs] = map length [accL,accR]
-              in  PhqFnInfixApply f (refIn accR $ nLhsRefs-1)
-                                    (refIn accR $ nRhsRefs-1) : accR
-       go acc term = term : acc
+              in  recomb (refIn accR $ nLhsRefs-1)
+                         (refIn accR $ nRhsRefs-1) : accR
        
        expandRefs :: [PhqFuncTerm] -> PhqFuncTerm -> PhqFuncTerm
        expandRefs rrl c = expnd c
         where reflist = reverse rrl
-              expnd (PhqFnTempRef n) = expnd $ reflist!!n
+              expnd (PhqFnTempRef n _) = expnd $ reflist!!n
               expnd (PhqFnFuncApply f t) = PhqFnFuncApply f $ expnd t
               expnd (PhqFnInfixApply f a b) = PhqFnInfixApply f (expnd a) (expnd b)
+              expnd (PhqFnInfixFoldOverIndexer ixd ifx        fdInit         fdand)
+                   = PhqFnInfixFoldOverIndexer ixd ifx (expnd fdInit) (expnd fdand)
               expnd c = c
        
-       refIn rrl n = chase(PhqFnTempRef n)
+       refIn rrl n = chase(PhqFnTempRef n $ "tmp"++show n)
         where reflist = reverse rrl
-              chase (PhqFnTempRef n)
-                | r'@(PhqFnTempRef n')<-reflist!!n = chase r'
+              chase (PhqFnTempRef n _)
+                | r'@(PhqFnTempRef _ _)<-reflist!!n = chase r'
               chase c = c
        
        prune :: [PhqFuncTerm] -> (PhqFuncTerm, [(Int, PhqFuncTerm)])
@@ -614,19 +647,22 @@ seqPrunePhqFuncTerm = prune . reverse . go []
                | n`elem`doomed  = Nothing
                | otherwise      = Just (n, inlineIn e)
               
-              inlineIn (PhqFnTempRef n')
+              inlineIn (PhqFnTempRef n' _)
                | n'`elem`doomed = inlineIn $ l!!n'
               inlineIn (PhqFnFuncApply f e) = PhqFnFuncApply f $ inlineIn e
               inlineIn (PhqFnInfixApply f a b) = PhqFnInfixApply f (inlineIn a) (inlineIn b)
+              inlineIn (PhqFnInfixFoldOverIndexer ixd ifx           fdInit            fdand)
+                      = PhqFnInfixFoldOverIndexer ixd ifx (inlineIn fdInit) (inlineIn fdand)
               inlineIn e = e
               
               
               doomed = filter ((<=1) . length . referingTo) $ map fst indexed
               
               referingTo n = filter (refersTo n) l
-              refersTo n (PhqFnTempRef n') = n==n'
+              refersTo n (PhqFnTempRef n' _) = n==n'
               refersTo n (PhqFnFuncApply _ e) = refersTo n e
               refersTo n (PhqFnInfixApply _ a b) = refersTo n a || refersTo n b
+              refersTo n (PhqFnInfixFoldOverIndexer _ _ a b) = refersTo n a || refersTo n b
               refersTo _ _ = False
 
  
@@ -644,18 +680,47 @@ calculateDimExpression (DimExpression decomp) = product $ map phqfImplement deco
 
 
 
-cqtxTermImplementation :: CXXExpression -> PhqFuncTerm -> CXXCode CXXExpression
+cqtxTermImplementation :: CXXExpression -> PhqFuncTerm -> CXXCode ( CXXCode() )
 cqtxTermImplementation paramSource e = do
-           forM_ seqChain $ \(rn,se) ->
-              cxxLine $ "physquantity tmp"++show rn++" = "++showE se++";"
+           forM_ seqChain $ \(rn,se) -> 
+                   cxxSurround ("physquantity "++rn++" =") (showE se) (";")
            return $ showE result
  where (result,seqChain) = seqPrunePhqFuncTerm e
-       showE (PhqFnDimlessConst x) = "("++show x++"*real1)"
-       showE (PhqFnPhysicalConst x) = "("++x++")"
-       showE (PhqFnParameter x) = argderefv paramSource x
-       showE (PhqFnTempRef n) = "tmp"++show n
-       showE (PhqFnFuncApply (CXXFunc f) a) = f $ showE a
-       showE (PhqFnInfixApply (CXXInfix f) a b) = showE a `f` showE b
+       showE (PhqFnDimlessConst x) = cxxLine $ "("++show x++"*real1)"
+       showE (PhqFnPhysicalConst x) = cxxLine $ "("++x++")"
+       showE (PhqFnParameter x) = cxxLine $ argderefv paramSource x
+       showE (PhqFnTempRef _ tmpvn) = cxxLine $ tmpvn
+       showE (PhqFnFuncApply (CXXFunc f) a) = procCXXCode f $ showE a
+       showE (PhqFnInfixApply (CXXInfix f) a b) = cxxCombineBlockIndented f (showE a) (showE b)
+       showE (PhqFnInfixFoldOverIndexer (PhqVarIndexer idxId idxNm) 
+                                        folder initE summandE ) = do
+                   cxxLine $ "[&]() -> physquantity {"
+                   cxxIndent 2 $ do
+                      let i = indizesPrefix++idxNm
+                          fdAcc = "foldvrb_over_"++idxNm
+                      cxxSurround ("physquantity "++fdAcc++" = ") (showE initE) (";")
+                      cxxLine $ "for(unsigned "++i++"=0\
+                                   \; "++i++"<"++i++indexRangePostfix++"\
+                                   \; ++"++i++") {"
+                      cxxIndent 2 $ do
+                         foldandResE <- cqtxTermImplementation paramSource summandE
+                         combineAssigner folder fdAcc foldandResE
+                      cxxLine $ "}"
+                   cxxLine $ "}()"
+       
+
+-- | Transform a C / C++ infix into the corresponding combined assignment operator,
+-- i.e. @+ x y@ maps to @x += y;@. When this is not possible, the explicit form is
+-- used, e.g. @x pow@ will yield @x = pow(x, y);@.
+combineAssigner :: CXXInfix -> CXXExpression -> CXXCode() -> CXXCode()
+combineAssigner (CXXInfix f) acc inc
+  = case filter(/=' ') $ f"""" of
+     "+" -> cxxSurround (acc++" += ") inc (";")
+     "-" -> cxxSurround (acc++" -= ") inc (";")
+     "*" -> cxxSurround (acc++" *= ") inc (";")
+     "/" -> cxxSurround (acc++" /= ") inc (";")
+     _   -> cxxSurround (acc++" = ") (procCXXCode (f acc) inc) (";")
+                                        
 
 
 
@@ -714,7 +779,7 @@ class (Functor l, Foldable l) => IsolenList l where
   isoLength = length . toList
   enumFrom' :: Enum a => a -> l a
   enumFrom' = buildIsolenList succ
-  (!!@) :: Int -> l a -> a
+  (!!@) :: l a -> Int -> a
 
 perfectZip :: IsolenList l => l a -> l b -> l (a,b)
 perfectZip = perfectZipWith(,)
@@ -742,7 +807,7 @@ instance IsolenList IsolenEnd where
   P !!@ (-1) = undefined
   
 instance (IsolenList l) => IsolenList (IsolenCons l) where
-  perfectZipWith f (x:.xs) (y:.ys) = f x y :. perfectZip xs ys
+  perfectZipWith f (x:.xs) (y:.ys) = f x y :. perfectZipWith f xs ys
   buildIsolenList f s = s :. buildIsolenList f (f s)
   isoLength (_:.xs) = 1 + isoLength xs
   (x:._) !!@ 0 = x
