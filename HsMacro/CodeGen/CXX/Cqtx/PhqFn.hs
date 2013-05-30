@@ -89,7 +89,7 @@ import Prelude hiding (foldr, concat, sum, product, any, elem)
 -- well).
 -- 
 -- For example, the standard gaussian peak
--- @&#x1d434;&#x22c5;exp(-(&#x1d465;-&#x1d465;&#x2080;)&#xb2;/(2&#x22c5;&#x3c3;&#xb2;))@
+-- @&#x1d434;&#x22c5;exp(-(&#x1d465;-&#x1d465;&#x2080;)&#xb2;/(2&#x22c5;&#x1d70e;&#xb2;))@
 -- could be defined thus:
 -- 
 -- >  phqFn "gaussPeak" ("x":."x_0":."\\sigma":."A":.P)
@@ -125,10 +125,10 @@ phqFlatMultiIdFn fnName' sclLabels ixerLabels indexedFn = ReaderT $ codeWith whe
  codeWith config = do
      cxxLine     $ "                                                                COPYABLE_PDERIVED_CLASS(/*"
      cxxLine     $ "class*/"++className++",/*: public */fittable_phmsqfn) {"
-     helpers <- cxxIndent 2 
-                 $ dimFetchDeclares
-     cxxIndent 2 $ rangesDecl
-     cxxIndent 2 $ offsetMgr
+     helpers <- cxxIndent 2 $ do
+                      rangesDecl
+                      offsetMgr
+                      dimFetchDeclares
      cxxLine     $ " public:"
      cxxIndent 2 $ do constructor
                       paramExamples helpers
@@ -224,27 +224,32 @@ phqFlatMultiIdFn fnName' sclLabels ixerLabels indexedFn = ReaderT $ codeWith whe
              when (not $ null rangeConstsNeeded) .
                cxxLine $ "unsigned "
                         ++ intercalate ", " rangeConstsNeeded ++ ";"
-             when (not $ null offsetConstsNeeded) .
+             when (not . null $ toList offsetConstsNeeded) .
                cxxLine $ "unsigned "
-                        ++ intercalate ", " offsetConstsNeeded ++ ";"
+                        ++ intercalate ", " (toList offsetConstsNeeded) ++ ";"
          
-         rangeConstsNeeded = filter ( (==head indizesPrefix) . head )
-                               $ toList ixableParamRanges
-         offsetConstsNeeded = map ( (ixablePPrefix++) . (++ixaOffsetPostfix)
+         rangeConstsNeeded :: [CXXExpression]
+         rangeConstsNeeded = map ( (indizesPrefix++) . (++indexRangePostfix) . fst )
+                             . filter ( isNothing . snd )
+                               $ toList ixerLabels
+ 
+         offsetConstsNeeded :: indexedPrmsList CXXExpression
+         offsetConstsNeeded = fmap ( (ixablePPrefix++) . (++ixaOffsetPostfix)
                                      . makeSafeCXXIdentifier . fst           ) 
-                               $ toList ixaParams
+                               ixaParams
             
          className = fnName++"Function"
          fnName = makeSafeCXXIdentifier fnName'
          
          offsetMgr :: CXXCode()
          offsetMgr = do
-            cxxLine     $ "void manage_offsets() {"
+            cxxLine     $ "void manage_paramarr_offsets() {"
             cxxIndent 2 $ do
                cxxLine     $ "unsigned stackp = "++show(isoLength scalarParamIds)++";"
-               forM_ (zip offsetConstsNeeded $ toList ixableParamRanges)
+               forM_ (perfectZip offsetConstsNeeded ixableParamRanges)
                        $ \(osc, rng) -> do
-                  cxxLine     $ osc ++ " = stackp; stackp += " ++ rng ++ ";"
+                  cxxLine     $ osc ++ " = stackp;"
+                  cxxLine     $ "stackp += " ++ rng ++ ";"
                cxxLine     $ "argdrfs.resize(stackp);"
             cxxLine     $ "}"
             
@@ -253,16 +258,24 @@ phqFlatMultiIdFn fnName' sclLabels ixerLabels indexedFn = ReaderT $ codeWith whe
          constructor = do
             cxxLine     $ className ++"("++args++")"++initialisers++" {"
             cxxIndent 2 $ do
-               cxxLine     $ "manage_offsets();"
+               cxxLine     $ "manage_paramarr_offsets();"
                forM_ idxedDefaultLabels $ \(n,label) ->
                   cxxLine  $ "argdrfs["++show n++"] = "++show label++";"
+               forM_ (perfectZip3 ixaParams ixableParamRanges offsetConstsNeeded) 
+                         $ \((ixaLbl, (PhqVarIndexer _ ixn)), rangeq, offsetQ) -> do
+                  cxxLine  $ "for (unsigned "++ixn++"=0\
+                             \; "++ixn++" < "++rangeq
+                           ++"; ++"++ixn++")"
+                  cxxIndent 2 $ do 
+                     cxxLine  $ "argdrfs["++offsetQ++" + "++ixn++"] = "
+                                    ++show ixaLbl++" + LaTeX_subscript("++ixn++");"
             cxxLine     $ "}"
-          where cstrArgs = map undefined $ toList ixableParamIds
-                args = intercalate ", " cstrArgs
+          where cstrArgs = rangeConstsNeeded
+                args = intercalate ", " $ map ("unsigned "++) cstrArgs
                 initialisers
-                  | null cstrArgs  = ""
-                  | otherwise      = ": " ++ intercalate ", "
-                                      ( map (\a -> a++"("++a++")" ) cstrArgs )
+                  | null $ toList ixableParamRanges  = ""
+                  | otherwise      = "\n          : "
+                        ++ intercalate ", " ( map (\a -> a++"("++a++")" ) cstrArgs )
          
          indexers :: indexerList PhqVarIndexer
          indexers = perfectZipWith PhqVarIndexer (enumFrom' 0) $ fmap fst ixerLabels
@@ -705,6 +718,7 @@ cqtxTermImplementation paramSource e = do
                          foldandResE <- cqtxTermImplementation paramSource summandE
                          combineAssigner folder fdAcc foldandResE
                       cxxLine $ "}"
+                      cxxLine $ "return "++fdAcc++";"
                    cxxLine $ "}()"
        
 
@@ -782,6 +796,12 @@ class (Functor l, Foldable l) => IsolenList l where
 
 perfectZip :: IsolenList l => l a -> l b -> l (a,b)
 perfectZip = perfectZipWith(,)
+
+perfectZipWith3 :: IsolenList l => (a -> b -> c -> d) -> l a -> l b -> l c -> l d
+perfectZipWith3 f la lb = perfectZipWith (uncurry . f) la . perfectZip lb
+
+perfectZip3 :: IsolenList l => l a -> l b -> l c -> l (a,b,c)
+perfectZip3 = perfectZipWith3 (,,)
 
 
 
