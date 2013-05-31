@@ -181,10 +181,14 @@ phqFlatMultiIdFn fnName' sclLabels ixerLabels indexedFn = ReaderT $ codeWith whe
                cxxLine     $ "return example;"
             cxxLine     $ "}"
          
-         dimFetchDeclares :: CXXCode [(Int,CXXExpression)]
-         dimFetchDeclares = forM (toList scalarParamIds) $ \i -> do
-            let functionName = "example_parameter"++show i++"value"
-            let resultOptions = relevantDimExprsFor (PhqIdf i) fnDimTrace
+         dimFetchDeclares 
+            :: CXXCode [(Int, CXXExpression)]
+         dimFetchDeclares = forM ( map (False,) (toList scalarParamIds)
+                                ++ map (True, ) (toList ixableParamIds) ) 
+                             $ \(needsIndexer, prmId) -> do
+            let functionName = "example_"++(guard needsIndexer >> "multi")
+                                  ++"parameter"++show prmId++"value"
+            let resultOptions = relevantDimExprsFor (PhqIdf prmId) fnDimTrace
             
             cxxLine     $ "auto "++functionName++"( const measure& constraints\n\
                           \                       , const physquantity& desiredret)const -> physquantity {"
@@ -192,21 +196,52 @@ phqFlatMultiIdFn fnName' sclLabels ixerLabels indexedFn = ReaderT $ codeWith whe
                forM_ resultOptions $ \decomp -> do
                   cxxLine     $ "{"
                   cxxIndent 2 $ do
+                     let refMultiParamVarb n = "reference_for_multiparam_"++show n
                      cxxLine     $ "bool thisdecomp_failed = false;"
                      forM_ (fixValDecomposition decomp) $ \(e,_) -> case e of
-                        PhqFnParamVal (PhqIdf n) -> do
-                           cxxLine    $ "if(!constraints.has(*argdrfs["++show n++"]))"
-                           cxxLine    $ "  thisdecomp_failed = true;"
+                        PhqFnParamVal (PhqIdf n) -> if n < nScalarParams
+                          then do
+                           cxxLine     $ "if(!constraints.has(*argdrfs["++show n++"]))"
+                           cxxLine     $ "  thisdecomp_failed = true;"
+                          else do
+                           let n' = n - nScalarParams
+                               (idxerId, PhqVarIndexer _ i) = ixaParams !!@ n'
+                               idxerRange = ixableParamRanges !!@ n'
+                               offsetQ = offsetConstsNeeded !!@ n'
+                               matchFound = "forany_"++i++"_pfound"
+                           cxxLine     $ "physquantity "++refMultiParamVarb n'++";"
+                           cxxLine     $ "{"
+                           cxxIndent 2 $ do
+                              cxxLine     $ "bool "++matchFound++" = false;"
+                              cxxLine     $ "for(unsigned "++i++"=0\
+                                                \; "++i++"<"++idxerRange
+                                              ++"; ++"++i++") {"
+                              cxxIndent 2 $ do
+                                 let locatei = "argdrfs["++offsetQ++" + "++i++"]"
+                                 cxxLine     $ "if(constraints.has(*"++locatei++")) {"
+                                 cxxIndent 2 $ do
+                                    cxxLine     $ matchFound++" = true;"
+                                    cxxLine     $ refMultiParamVarb n'
+                                                   ++" = "++locatei++"(constraints);"
+                                    cxxLine     $ "break;"
+                                 cxxLine     $ "}"
+                              cxxLine     $ "}"
+                              cxxLine     $ "if(!"++matchFound++") thisdecomp_failed = true;"
+                           cxxLine     $ "}"
                         _ -> return ()
                      cxxLine     $ "if(!thisdecomp_failed) {"
                      cxxIndent 2 $ do
-                        result <- cqtxTermImplementation "constraints" (calculateDimExpression decomp)
+                        let q (PhqIdf n)
+                              | n  < nScalarParams    = PhqFnParameter $ PhqIdf n
+                              | n' <-n-nScalarParams  = PhqFnTempRef minBound $ refMultiParamVarb n'
+                        result <- cqtxTermImplementation "constraints" $
+                                   calculateDimExpression q decomp
                         cxxSurround "physquantity result = " result ";"
                         cxxLine     $ "return result.werror(result);"
                      cxxLine     $ "}"
                   cxxLine     $ "}"
                cxxLine     $ "std::cerr << \"Insufficient constraints given to determine the physical dimension\\n\
-                                            \  of parameter \\\"\" << *argdrfs["++show i++"] << \"\\\"\
+                                            \  of parameter \\\"\" << *argdrfs["++show prmId++"] << \"\\\"\
                                              \ in phqfn '"++fnName++"'.\\n Sufficient constraint choices would be:\\n\";"
                forM_ resultOptions $ \(DimExpression decomp) -> do
                   cxxLine  $ "std::cerr<<\"  \"" ++ concat (intersperse"<<','"$
@@ -217,7 +252,7 @@ phqFlatMultiIdFn fnName' sclLabels ixerLabels indexedFn = ReaderT $ codeWith whe
                                 | (fixv,_) <- decomp ]) ++ " << std::endl;"
                cxxLine     $ "abort();"
             cxxLine     $ "}"
-            return (i,functionName)
+            return (prmId,functionName)
          
          rangesDecl :: CXXCode()
          rangesDecl = do
@@ -284,7 +319,7 @@ phqFlatMultiIdFn fnName' sclLabels ixerLabels indexedFn = ReaderT $ codeWith whe
          scalarParamIds = enumFrom' 0
          
          ixableParamIds :: indexedPrmsList Int
-         ixableParamIds = enumFrom' nParams
+         ixableParamIds = enumFrom' nScalarParams
          
          ixableParamRanges :: indexedPrmsList CXXExpression
          ixableParamRanges = fmap (rngFind . snd) ixaParams
@@ -296,7 +331,7 @@ phqFlatMultiIdFn fnName' sclLabels ixerLabels indexedFn = ReaderT $ codeWith whe
          
          
          idxedDefaultLabels = perfectZip scalarParamIds sclLabels
-         nParams = isoLength scalarParamIds
+         nScalarParams = isoLength scalarParamIds
 
 
 indizesPrefix, ixablePPrefix, indexRangePostfix, ixaOffsetPostfix :: CXXExpression
@@ -679,10 +714,11 @@ seqPrunePhqFuncTerm = second ( map . first $ ("tmp"++) . show )
 
  
  
-calculateDimExpression :: DimExpression -> PhqFuncTerm
-calculateDimExpression (DimExpression decomp) = product $ map phqfImplement decomp
+calculateDimExpression :: (PhqIdf->PhqFuncTerm) -> DimExpression -> PhqFuncTerm
+calculateDimExpression prImpl (DimExpression decomp) 
+           = product $ map phqfImplement decomp
  where phqfImplement (e, x) = implement e ** fromRational x
-       implement (PhqFnParamVal pr) = PhqFnParameter pr
+       implement (PhqFnParamVal pr) = prImpl pr
        implement PhqFnResultVal = PhqFnPhysicalConst "desiredret"
        implement PhqDimlessConst = PhqFnDimlessConst 1
 
