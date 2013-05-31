@@ -174,15 +174,31 @@ phqFlatMultiIdFn fnName' sclLabels ixerLabels indexedFn = ReaderT $ codeWith whe
                           \                         , const physquantity& desiredret)const override -> measure {"
             cxxIndent 2 $ do
                cxxLine     $ "measure example;"
-               forM_ helpers $ \(i,helper) -> do
-                  cxxLine     $ "if(!constraints.has(*argdrfs["++show i++"]))"
-                  cxxLine     $ "  example.let(*argdrfs["++show i++"]) = "
+               forM_ helpers $ \(n,helper) -> if n < nScalarParams
+                 then do
+                  cxxLine     $ "if(!constraints.has(*argdrfs["++show n++"]))"
+                  cxxLine     $ "  example.let(*argdrfs["++show n++"]) = "
                                      ++helper++"(constraints, desiredret);"
+                 else do
+                  let n' = n - nScalarParams
+                      (idxerId, PhqVarIndexer _ i) = ixaParams !!@ n'
+                      idxerRange = ixableParamRanges !!@ n'
+                      offsetQ = offsetConstsNeeded !!@ n'
+                  cxxLine     $ "for(unsigned "++i++"=0\
+                                    \; "++i++"<"++idxerRange
+                                  ++"; ++"++i++") {"
+                  cxxIndent 2 $ do
+                     let locatei = "argdrfs["++offsetQ++" + "++i++"]"
+                     cxxLine     $ "if(!constraints.has(*"++locatei++")) {"
+                     cxxIndent 2 $ do
+                        cxxLine     $ "example.let(*"++locatei++")\
+                                        \ = "++helper++"(constraints, desiredret);"
+                     cxxLine     $ "}"
+                  cxxLine     $ "}"
                cxxLine     $ "return example;"
             cxxLine     $ "}"
          
-         dimFetchDeclares 
-            :: CXXCode [(Int, CXXExpression)]
+         dimFetchDeclares :: CXXCode [(Int, CXXExpression)]
          dimFetchDeclares = forM ( map (False,) (toList scalarParamIds)
                                 ++ map (True, ) (toList ixableParamIds) ) 
                              $ \(needsIndexer, prmId) -> do
