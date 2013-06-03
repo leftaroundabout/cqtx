@@ -221,6 +221,17 @@ struct LaTeXofstream: ofstream{
     return *this;
   }
   
+  void insertMeasure (const measure& insq) {
+    *this << "\\begin{align}\n   ";
+    bool hasmulti=false;
+    for(auto& value: insq) {
+      if(hasmulti) *this << "\n \\\\";
+      *this << value.cptstr() << " =& " << value;
+      hasmulti = true;
+    }
+    *this << "\n\\end{align}\n";
+  }
+  
   void insertfullvaroutp(physquantity insq){
     *this << "\\[\n  " << insq.cptstr() << " = ";
     operator<<(insq);

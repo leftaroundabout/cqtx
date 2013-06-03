@@ -47,7 +47,7 @@
 -- squaredistance-calculation on CUDA.
 -- 
 
-module CodeGen.CXX.Cqtx.PhqFn( phqFn
+module CodeGen.CXX.Cqtx.PhqFn( phqFn, phqFlatMultiIdFn
                                 -- * General Cqtx code generation
                              , module CodeGen.CXX.Code
                              , CqtxCode
