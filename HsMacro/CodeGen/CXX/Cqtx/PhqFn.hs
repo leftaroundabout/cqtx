@@ -155,12 +155,13 @@ phqFlatMultiIdFn fnName' sclLabels ixerLabels indexedFn = ReaderT $ codeWith whe
          (ixaParams, function) = indexedFn indexers
  
          fnResultTerm :: PhqFuncTerm
-         fnResultTerm = function (fmap (\i->PhqFnParameter $ PhqIdf i) scalarParamIds)
+         fnResultTerm = function (fmap (\i->PhqFnParameter $ show i) scalarParamIds)
                                  (perfectZipWith (\vni (vnm, PhqVarIndexer ix inm) 
                                           -> IdxablePhqDefVar $ q vni vnm ix inm)
-                                      ixableParamIds ixaParams)
+                                      offsetConstsNeeded ixaParams)
               where q vni vnm ix inm (PhqVarIndexer ix' inm')
-                     | ix'==ix    = PhqFnParameter $ PhqIdf vni
+                     | ix'==ix    = PhqFnParameter $ vni ++ " + "
+                                      ++ indizesPrefix ++ makeSafeCXXIdentifier inm
                      | otherwise  = error 
                            $ "In HsMacro-defined phqfunction '"++fnName++"':\n\
                              \ Using wrong indexer '"++inm'++"' (not adapted range!) \
@@ -261,7 +262,7 @@ phqFlatMultiIdFn fnName' sclLabels ixerLabels indexedFn = ReaderT $ codeWith whe
                      cxxLine     $ "if(!thisdecomp_failed) {"
                      cxxIndent 2 $ do
                         let q (PhqIdf n)
-                              | n  < nScalarParams    = PhqFnParameter $ PhqIdf n
+                              | n  < nScalarParams    = PhqFnParameter $ show n
                               | n' <-n-nScalarParams  = PhqFnTempRef minBound $ refMultiParamVarb n'
                         result <- cqtxTermImplementation "constraints" $
                                    calculateDimExpression q decomp
@@ -293,7 +294,8 @@ phqFlatMultiIdFn fnName' sclLabels ixerLabels indexedFn = ReaderT $ codeWith whe
                         ++ intercalate ", " (toList offsetConstsNeeded) ++ ";"
          
          rangeConstsNeeded :: [CXXExpression]
-         rangeConstsNeeded = map ( (indizesPrefix++) . (++indexRangePostfix) . fst )
+         rangeConstsNeeded = map ( (indizesPrefix++) . (++indexRangePostfix)
+                                    . makeSafeCXXIdentifier . fst )
                              . filter ( isNothing . snd )
                                $ toList ixerLabels
  
@@ -377,8 +379,8 @@ ixaOffsetPostfix = "_offset"
 
 data PhqIdf = PhqIdf Int deriving (Eq, Ord, Show)
 
-argderefv :: CXXExpression -> PhqIdf -> String
-argderefv paramSource (PhqIdf n) = "argdrfs["++show n++"]("++paramSource++")"
+argderefv :: CXXExpression -> CXXExpression -> String
+argderefv paramSource n = "argdrfs["++n++"]("++paramSource++")"
 
 data DimTracer = DimlessConstant (Maybe Rational)
                | VardimVar PhqIdf
@@ -570,7 +572,8 @@ type PhysicalCqtxConst = String
 data PhqFuncTerm = PhqFnDimlessConst Double
                  | PhqFnPhysicalConst PhysicalCqtxConst
                  | PhqFnTempRef Int CXXExpression
-                 | PhqFnParameter PhqIdf
+                 | PhqFnParameter
+                      CXXExpression -- not the parameter itself, but an expression for its /index/ in the argdrfs array.
                  | PhqFnFuncApply CXXFunc PhqFuncTerm
                  | PhqFnInfixApply CXXInfix PhqFuncTerm PhqFuncTerm
                  | PhqFnInfixFoldOverIndexer PhqVarIndexer
