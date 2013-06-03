@@ -146,7 +146,7 @@ phqFlatMultiIdFn fnName' sclLabels ixerLabels indexedFn = ReaderT $ codeWith whe
      cxxIndent 2 $ do constructor
                       paramExamples helpers
                       functionEval
-     cxxLine     $ "} " ++ fnName ++ ";"
+     cxxLine     $ "} " ++ (guard (null rangeConstsNeeded) >> fnName) ++ ";"
    where 
 --          function :: forall x . PhqfnDefining x 
 --                       => scalarPrmsList x -> indexedPrmsList (IdxablePhqDefVar x) -> x
@@ -302,7 +302,9 @@ phqFlatMultiIdFn fnName' sclLabels ixerLabels indexedFn = ReaderT $ codeWith whe
                                      . makeSafeCXXIdentifier . fst           ) 
                                ixaParams
             
-         className = fnName++"Function"
+         className 
+           | null rangeConstsNeeded  = fnName++"Function"
+           | otherwise               = fnName
          fnName = makeSafeCXXIdentifier fnName'
          
          offsetMgr :: CXXCode()
