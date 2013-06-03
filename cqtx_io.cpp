@@ -502,9 +502,7 @@ struct LaTeXistream: streamT{
       cerr << "Table \"" << TableCaption << "\": bad format; need \\hline after column headers\n";
       abort();
     }
-    while (!tabenv.veof() && tabenv.peekcommand()!="hline"){
-      strs valcls(tabenv.getLaTeXline());
-//      cout << "Reading table from input: - - - - {" << valcls.str() << "\n - - - - - - - - - - - - - - - - }" << endl ;
+    auto columnize = [&](strs& valcls, bool seekuncrtonly) -> measure {
       unsigned int coln=0;
       measure thisline;
       do {
@@ -537,34 +535,61 @@ struct LaTeXistream: streamT{
           abort();
         }
         
-        if (contains_command(colvstr, "pm")){
-          strs tcl(colvstr);
-//          double thisval;
-          thisthing[*colunits[coln].first] = tcl.getnextbestnumber();
-          string shouldbe_pm=tcl.getcommand();
-          if (shouldbe_pm!="pm"){
-            cerr << "In table \"" << TableCaption << "\": bad cell format \"" << colvstr
-                 << "\".\n(Expected a $\\pm$ but found \"" << shouldbe_pm << "\".)";
-            abort();
+        if (!seekuncrtonly) {
+          if (contains_command(colvstr, "pm")){
+            strs tcl(colvstr);
+  //          double thisval;
+            thisthing[*colunits[coln].first] = tcl.getnextbestnumber();
+            string shouldbe_pm=tcl.getcommand();
+            if (shouldbe_pm!="pm"){
+              cerr << "In table \"" << TableCaption << "\": bad cell format \"" << colvstr
+                   << "\".\n(Expected a $\\pm$ but found \"" << shouldbe_pm << "\".)";
+              abort();
+            }
+            thisthing.seterror(tcl.getnextbestnumber() * *colunits[coln].first);
+           }else{
+            strs tcl(colvstr);
+            tcl >> thisthing[*colunits[coln].first];
           }
-          physquantity thiserror;
-          thisthing.seterror(tcl.getnextbestnumber() * *colunits[coln].first);
          }else{
           strs tcl(colvstr);
-          tcl >> thisthing[*colunits[coln].first];
+          string shouldbe_pm=tcl.getcommand();
+          if(tcl.veof()) {
+            thisthing = 0;
+           }else{
+            if (shouldbe_pm!="pm"){
+              cerr << "In table \"" << TableCaption << "\": bad cell format \"" << colvstr
+                   << "\".\n(Expected an uncertainty specifier but found no $\\pm$.)";
+              abort();
+            }
+            thisthing = tcl.getnextbestnumber() * *colunits[coln].first;
+          }
         }
 //        cout << thisthing << endl;
         thisline.let(colcapts[coln])=thisthing;
         ++coln;
       }while (!valcls.eofs());
-       //cout << thisline;
-      result.push_back(thisline);
-    }
-    return result;
+      return thisline;
+    };
     
- /*   while(!eof()){
-      
-    }*/
+    while (!tabenv.veof() && tabenv.peekcommand()!="hline"){
+      strs valcls(tabenv.getLaTeXline());
+//      cout << "Reading table from input: - - - - {" << valcls.str() << "\n - - - - - - - - - - - - - - - - }" << endl ;
+      //cout << thisline;
+      result.push_back(columnize(valcls, false));
+    }
+    
+    if(tabenv.veof())
+      return result;
+    
+    
+    strs errcls(tabenv.getLaTeXline());
+    measure globaluncrt = columnize(errcls, true);
+    
+    for(unsigned i=0; i<globaluncrt.size(); ++i) {
+      for(auto& row: result)
+        row[i].seterror(globaluncrt[i]);
+    }
     
     return result;
   }

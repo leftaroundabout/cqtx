@@ -1,6 +1,6 @@
 Name:                cqtx-hsmacros
 Version:             0.1
-Category:            media
+Category:            dsl
 Synopsis:            Haskell preprocessing / code generation for the cqtx C++ library
 License:             GPL-3
 License-file:        ../COPYING
