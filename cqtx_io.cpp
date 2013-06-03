@@ -226,7 +226,8 @@ struct LaTeXofstream: ofstream{
     bool hasmulti=false;
     for(auto& value: insq) {
       if(hasmulti) *this << "\n \\\\";
-      *this << value.cptstr() << " =& " << value;
+      *this << value.cptstr() << " =& ";
+      *this << value;
       hasmulti = true;
     }
     *this << "\n\\end{align}\n";

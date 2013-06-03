@@ -243,7 +243,8 @@ namespace stdPhysUnitsandConsts {
    ,          millimols = newUnit(  mols/1000,                           "mmol"  )
    ,       molsperliter = newUnit(  mols/liters,               "\\frac{mol}{l}"  )
    ,   molspercubemeter = newUnit(  mols/cubicmeters,        "\\frac{mol}{m^2}"  )
-   ,           percents = newUnit(  real1/100,                            "\\%"  );
+   ,           percents = newUnit(  real1/100,                            "\\%"  )
+   ,            degrees = newUnit(  real1*pi/180,                     "^\\circ"  );
 
   //...und Konstanten:
   const physquantity

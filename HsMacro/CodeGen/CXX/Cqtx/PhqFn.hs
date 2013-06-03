@@ -47,7 +47,7 @@
 -- squaredistance-calculation on CUDA.
 -- 
 
-module CodeGen.CXX.Cqtx.PhqFn( phqFn, phqFlatMultiIdFn
+module CodeGen.CXX.Cqtx.PhqFn( phqFn, phqFlatMultiIdFn, phqSingleIdMultiFn
                                 -- * General Cqtx code generation
                              , module CodeGen.CXX.Code
                              , CqtxCode
@@ -110,6 +110,19 @@ phqFn :: forall paramsList . IsolenList paramsList
 phqFn fnName sclLabels function
   = phqFlatMultiIdFn fnName sclLabels P $ \P -> (P, \scl P -> function scl)
 
+phqSingleIdMultiFn :: forall scalarPrmsList indexedPrmsList
+ . (IsolenList scalarPrmsList, IsolenList indexedPrmsList)
+   => String
+    -> scalarPrmsList String
+    -> (String, Maybe Int)
+    -> ( PhqVarIndexer ->
+          ( indexedPrmsList String
+          , forall x. PhqfnDefining x
+             => scalarPrmsList x -> indexedPrmsList (IdxablePhqDefVar x) -> x) )
+    -> CqtxCode()
+phqSingleIdMultiFn fnName' sclLabels indexer indexedFn
+     = phqFlatMultiIdFn fnName' sclLabels (indexer:.P) $
+                     \(i:.P) -> first (fmap (,i)) $ indexedFn i
 
 phqFlatMultiIdFn :: forall scalarPrmsList indexerList indexedPrmsList
  . (IsolenList scalarPrmsList, IsolenList indexerList, IsolenList indexedPrmsList)
